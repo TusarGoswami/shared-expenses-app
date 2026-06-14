@@ -1,10 +1,28 @@
 const express = require('express');
+const { Op } = require('sequelize');
 const auth = require('../middleware/auth');
-const Expense = require('../models/Expense');
-const GroupMember = require('../models/GroupMember');
+const { sequelize, Expense, ExpenseSplit, GroupMember, User } = require('../models');
 const { convertToINR } = require('../services/currencyConverter');
 
 const router = express.Router();
+
+// Helper to format Expense response to match Mongoose populate('paidBy')
+const formatExpense = (expense) => {
+  if (!expense) return null;
+  const json = expense.get({ plain: true });
+  return {
+    ...json,
+    _id: json.id,
+    paidBy: json.Payer ? { ...json.Payer, _id: json.Payer.id } : json.paidBy,
+    Payer: undefined,
+    splits: (json.splits || []).map((s) => ({
+      ...s,
+      _id: s.id,
+      userId: s.User ? { ...s.User, _id: s.User.id } : s.userId,
+      User: undefined,
+    })),
+  };
+};
 
 // ---------------------------------------------------------------------------
 // Helper: calculate splits based on split type
@@ -21,7 +39,8 @@ function calculateSplits(splitType, amount, splitDetails, activeMembers) {
         const share = idx === activeMembers.length - 1
           ? Math.round(remaining * 100) / 100
           : perPerson;
-        splits.push({ userId: member.userId._id || member.userId, amount: share });
+        const uId = member.userId && member.userId.id ? member.userId.id : member.userId;
+        splits.push({ userId: uId, amount: share });
         remaining -= share;
       });
       break;
@@ -108,27 +127,37 @@ router.get('/:id/expenses', auth, async (req, res, next) => {
   try {
     const { paidBy, splitType, startDate, endDate, includeDeleted } = req.query;
 
-    const filter = { groupId: req.params.id };
+    const where = { groupId: req.params.id };
 
     // By default, exclude soft-deleted expenses
     if (includeDeleted !== 'true') {
-      filter.isDeleted = false;
+      where.isDeleted = false;
     }
 
-    if (paidBy) filter.paidBy = paidBy;
-    if (splitType) filter.splitType = splitType;
+    if (paidBy) where.paidBy = paidBy;
+    if (splitType) where.splitType = splitType;
     if (startDate || endDate) {
-      filter.date = {};
-      if (startDate) filter.date.$gte = new Date(startDate);
-      if (endDate) filter.date.$lte = new Date(endDate);
+      where.date = {};
+      if (startDate) where.date[Op.gte] = new Date(startDate);
+      if (endDate) where.date[Op.lte] = new Date(endDate);
     }
 
-    const expenses = await Expense.find(filter)
-      .populate('paidBy', 'name email')
-      .populate('splits.userId', 'name email')
-      .sort({ date: -1 });
+    const expenses = await Expense.findAll({
+      where,
+      include: [
+        { model: User, as: 'Payer', attributes: ['id', 'name', 'email'] },
+        {
+          model: ExpenseSplit,
+          as: 'splits',
+          include: [{ model: User, as: 'User', attributes: ['id', 'name', 'email'] }],
+        },
+      ],
+      order: [['date', 'DESC']],
+    });
 
-    res.json({ expenses });
+    const formattedExpenses = expenses.map(formatExpense);
+
+    res.json({ expenses: formattedExpenses });
   } catch (error) {
     next(error);
   }
@@ -181,6 +210,12 @@ router.post('/:id/expenses', auth, async (req, res, next) => {
       });
     }
 
+    // Scale splitDetails by exchangeRate (since splitDetails amounts are in the raw currency)
+    const convertedSplitDetails = splitDetails?.map((d) => ({
+      ...d,
+      amount: d.amount !== undefined ? Number(d.amount) * exchangeRate : undefined,
+    }));
+
     // Calculate splits (use amountInINR for split calculations)
     let splits;
     if (isSettlement) {
@@ -190,34 +225,53 @@ router.post('/:id/expenses', auth, async (req, res, next) => {
           message: 'Settlement requires splitDetails with receiver info',
         });
       }
-      splits = splitDetails.map((d) => ({
+      splits = convertedSplitDetails.map((d) => ({
         userId: d.userId,
-        amount: Number(d.amount),
+        amount: d.amount,
       }));
     } else {
-      splits = calculateSplits(splitType, amountInINR, splitDetails, activeMembers);
+      splits = calculateSplits(splitType, amountInINR, convertedSplitDetails, activeMembers);
     }
 
-    const expense = await Expense.create({
-      groupId: req.params.id,
-      description: description.trim(),
-      amount: numericAmount,
-      currency: curr,
-      amountInINR,
-      exchangeRateUsed: exchangeRate,
-      date: expenseDate,
-      paidBy,
-      splitType,
-      splits,
-      isSettlement: isSettlement || false,
-      notes: notes?.trim() || '',
+    // Wrap in a transaction
+    const expense = await sequelize.transaction(async (t) => {
+      const exp = await Expense.create({
+        groupId: req.params.id,
+        description: description.trim(),
+        amount: numericAmount,
+        currency: curr,
+        amountInINR,
+        exchangeRateUsed: exchangeRate,
+        date: expenseDate,
+        paidBy,
+        splitType,
+        isSettlement: isSettlement || false,
+        notes: notes?.trim() || '',
+      }, { transaction: t });
+
+      const splitRecords = splits.map((s) => ({
+        expenseId: exp.id,
+        userId: s.userId,
+        amount: s.amount,
+      }));
+
+      await ExpenseSplit.bulkCreate(splitRecords, { transaction: t });
+
+      return exp;
     });
 
-    const populated = await Expense.findById(expense._id)
-      .populate('paidBy', 'name email')
-      .populate('splits.userId', 'name email');
+    const populated = await Expense.findByPk(expense.id, {
+      include: [
+        { model: User, as: 'Payer', attributes: ['id', 'name', 'email'] },
+        {
+          model: ExpenseSplit,
+          as: 'splits',
+          include: [{ model: User, as: 'User', attributes: ['id', 'name', 'email'] }],
+        },
+      ],
+    });
 
-    res.status(201).json({ expense: populated });
+    res.status(201).json({ expense: formatExpense(populated) });
   } catch (error) {
     next(error);
   }
@@ -229,8 +283,10 @@ router.post('/:id/expenses', auth, async (req, res, next) => {
 router.put('/:id/expenses/:expId', auth, async (req, res, next) => {
   try {
     const expense = await Expense.findOne({
-      _id: req.params.expId,
-      groupId: req.params.id,
+      where: {
+        id: req.params.expId,
+        groupId: req.params.id,
+      },
     });
 
     if (!expense) {
@@ -277,28 +333,71 @@ router.put('/:id/expenses/:expId', auth, async (req, res, next) => {
 
       const currentAmountINR = updates.amountInINR ?? expense.amountInINR;
       const currentSplitType = updates.splitType ?? expense.splitType;
+      const currentExchangeRate = updates.exchangeRateUsed ?? expense.exchangeRateUsed;
+      const inputSplitDetails = updates.splitDetails || req.body.splitDetails;
+
+      const convertedSplitDetails = inputSplitDetails?.map((d) => ({
+        ...d,
+        amount: d.amount !== undefined ? Number(d.amount) * currentExchangeRate : undefined,
+      }));
 
       if (!updates.isSettlement && !expense.isSettlement) {
         updates.splits = calculateSplits(
           currentSplitType,
           currentAmountINR,
-          updates.splitDetails || req.body.splitDetails,
+          convertedSplitDetails,
           activeMembers
         );
+      } else {
+        // For settlements, if splitDetails are updated, we need to update splits too!
+        if (convertedSplitDetails && convertedSplitDetails.length > 0) {
+          updates.splits = convertedSplitDetails.map((d) => ({
+            userId: d.userId,
+            amount: d.amount,
+          }));
+        }
       }
     }
 
-    // Remove splitDetails from updates (not stored in schema)
-    delete updates.splitDetails;
+    // Perform database operations within a transaction
+    await sequelize.transaction(async (t) => {
+      // Remove splitDetails from updates (not stored in schema)
+      const splitsToCreate = updates.splits;
+      delete updates.splitDetails;
+      delete updates.splits;
 
-    Object.assign(expense, updates);
-    await expense.save();
+      Object.assign(expense, updates);
+      await expense.save({ transaction: t });
 
-    const populated = await Expense.findById(expense._id)
-      .populate('paidBy', 'name email')
-      .populate('splits.userId', 'name email');
+      if (splitsToCreate) {
+        // Delete existing splits
+        await ExpenseSplit.destroy({
+          where: { expenseId: expense.id },
+          transaction: t,
+        });
 
-    res.json({ expense: populated });
+        // Re-create splits
+        const splitRecords = splitsToCreate.map((s) => ({
+          expenseId: expense.id,
+          userId: s.userId,
+          amount: s.amount,
+        }));
+        await ExpenseSplit.bulkCreate(splitRecords, { transaction: t });
+      }
+    });
+
+    const populated = await Expense.findByPk(expense.id, {
+      include: [
+        { model: User, as: 'Payer', attributes: ['id', 'name', 'email'] },
+        {
+          model: ExpenseSplit,
+          as: 'splits',
+          include: [{ model: User, as: 'User', attributes: ['id', 'name', 'email'] }],
+        },
+      ],
+    });
+
+    res.json({ expense: formatExpense(populated) });
   } catch (error) {
     next(error);
   }
@@ -310,8 +409,10 @@ router.put('/:id/expenses/:expId', auth, async (req, res, next) => {
 router.delete('/:id/expenses/:expId', auth, async (req, res, next) => {
   try {
     const expense = await Expense.findOne({
-      _id: req.params.expId,
-      groupId: req.params.id,
+      where: {
+        id: req.params.expId,
+        groupId: req.params.id,
+      },
     });
 
     if (!expense) {
@@ -321,7 +422,18 @@ router.delete('/:id/expenses/:expId', auth, async (req, res, next) => {
     expense.isDeleted = true;
     await expense.save();
 
-    res.json({ message: 'Expense deleted', expense });
+    const populated = await Expense.findByPk(expense.id, {
+      include: [
+        { model: User, as: 'Payer', attributes: ['id', 'name', 'email'] },
+        {
+          model: ExpenseSplit,
+          as: 'splits',
+          include: [{ model: User, as: 'User', attributes: ['id', 'name', 'email'] }],
+        },
+      ],
+    });
+
+    res.json({ message: 'Expense deleted', expense: formatExpense(populated) });
   } catch (error) {
     next(error);
   }

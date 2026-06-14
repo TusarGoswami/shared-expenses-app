@@ -11,16 +11,18 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const auth = require('../middleware/auth');
-const Group = require('../models/Group');
-const GroupMember = require('../models/GroupMember');
-const Expense = require('../models/Expense');
-const ImportLog = require('../models/ImportLog');
-const User = require('../models/User');
+const { Group, GroupMember, Expense, ExpenseSplit, ImportLog, ImportAnomaly, User, sequelize } = require('../models');
 const { parseAndAnalyzeCSV } = require('../services/csvImporter');
 const { convertToINR } = require('../services/currencyConverter');
 const { normalizeName } = require('../utils/nameNormalizer');
 
 const router = express.Router();
+
+// Helper to check if string is a valid UUID
+const isUUID = (str) => {
+  if (typeof str !== 'string') return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+};
 
 // ---------------------------------------------------------------------------
 // Multer configuration for CSV file uploads
@@ -59,7 +61,7 @@ router.post('/:id/import', auth, upload.single('csvFile'), async (req, res, next
     const groupId = req.params.id;
 
     // Validate group exists
-    const group = await Group.findById(groupId);
+    const group = await Group.findByPk(groupId);
     if (!group) {
       return res.status(404).json({ message: 'Group not found' });
     }
@@ -79,21 +81,42 @@ router.post('/:id/import', auth, upload.single('csvFile'), async (req, res, next
       groupId
     );
 
-    // Create the ImportLog document (not yet confirmed)
-    const importLog = await ImportLog.create({
-      groupId,
-      uploadedBy: req.user.userId,
-      fileName: req.file.originalname,
-      totalRows: summary.totalRows,
-      successCount: summary.successCount,
-      errorCount: summary.errorCount,
-      skippedCount: summary.skippedCount,
-      anomalies,
-      parsedRows,
-      isConfirmed: false,
+    // Create the ImportLog & ImportAnomaly entries inside a transaction
+    const importLog = await sequelize.transaction(async (t) => {
+      const log = await ImportLog.create({
+        groupId,
+        uploadedBy: req.user.userId,
+        fileName: req.file.originalname,
+        totalRows: summary.totalRows,
+        successCount: summary.successCount,
+        errorCount: summary.errorCount,
+        skippedCount: summary.skippedCount,
+        parsedRows,
+        isConfirmed: false,
+      }, { transaction: t });
+
+      if (anomalies && anomalies.length > 0) {
+        const anomalyRecords = anomalies.map((a) => ({
+          importLogId: log.id,
+          rowIndex: a.rowIndex,
+          issueType: a.issueType,
+          description: a.description,
+          rawRow: a.rawRow,
+          suggestedAction: a.suggestedAction,
+          status: a.status || 'pending',
+        }));
+        await ImportAnomaly.bulkCreate(anomalyRecords, { transaction: t });
+      }
+
+      return log;
     });
 
-    // Clean up the uploaded file (data is now in the ImportLog)
+    // Load full log with created anomalies
+    const populatedLog = await ImportLog.findByPk(importLog.id, {
+      include: [{ model: ImportAnomaly, as: 'anomalies' }],
+    });
+
+    // Clean up the uploaded file (data is now in the database)
     try {
       fs.unlinkSync(csvPath);
     } catch (_e) {
@@ -103,16 +126,17 @@ router.post('/:id/import', auth, upload.single('csvFile'), async (req, res, next
     // Return the full import report for the frontend to display
     res.status(200).json({
       message: 'CSV parsed successfully. Review anomalies before confirming import.',
-      importLogId: importLog._id,
+      importLogId: populatedLog.id,
       summary: {
         totalRows: summary.totalRows,
         successCount: summary.successCount,
         errorCount: summary.errorCount,
-        anomalyCount: anomalies.length,
+        anomalyCount: populatedLog.anomalies.length,
         anomalyBreakdown: summary.anomalyBreakdown,
       },
-      anomalies: importLog.anomalies.map((a) => ({
-        _id: a._id,
+      anomalies: populatedLog.anomalies.map((a) => ({
+        id: a.id,
+        _id: a.id, // preserve both formats for frontend
         rowIndex: a.rowIndex,
         issueType: a.issueType,
         description: a.description,
@@ -120,7 +144,7 @@ router.post('/:id/import', auth, upload.single('csvFile'), async (req, res, next
         suggestedAction: a.suggestedAction,
         status: a.status,
       })),
-      parsedRows: parsedRows.map((r, idx) => ({
+      parsedRows: populatedLog.parsedRows.map((r) => ({
         rowIndex: r.rowIndex,
         description: r.description,
         amount: r.amount,
@@ -147,16 +171,17 @@ router.post('/:id/import/confirm', auth, async (req, res, next) => {
     const groupId = req.params.id;
     const { importLogId, decisions } = req.body;
 
-    // decisions = [{ anomalyId: string, status: 'approved'|'rejected' }]
-
     if (!importLogId) {
       return res.status(400).json({ message: 'importLogId is required' });
     }
 
     // Find the import log
     const importLog = await ImportLog.findOne({
-      _id: importLogId,
-      groupId,
+      where: {
+        id: importLogId,
+        groupId,
+      },
+      include: [{ model: ImportAnomaly, as: 'anomalies' }],
     });
 
     if (!importLog) {
@@ -172,9 +197,12 @@ router.post('/:id/import/confirm', auth, async (req, res, next) => {
     // -----------------------------------------------------------------------
     if (decisions && Array.isArray(decisions)) {
       for (const decision of decisions) {
-        const anomaly = importLog.anomalies.id(decision.anomalyId);
+        // Look up by id or _id in case the frontend sends MongoDB format
+        const anomalyId = decision.anomalyId || decision._id;
+        const anomaly = importLog.anomalies.find((a) => a.id === anomalyId);
         if (anomaly && ['approved', 'rejected'].includes(decision.status)) {
           anomaly.status = decision.status;
+          await anomaly.save();
         }
       }
     }
@@ -185,13 +213,12 @@ router.post('/:id/import/confirm', auth, async (req, res, next) => {
     );
 
     if (unresolvedAnomalies.length > 0) {
-      // Save partial decisions and tell the user to finish
-      await importLog.save();
       return res.status(400).json({
         message: `${unresolvedAnomalies.length} anomaly(ies) still pending review. Resolve all before confirming.`,
         unresolvedCount: unresolvedAnomalies.length,
         unresolvedAnomalies: unresolvedAnomalies.map((a) => ({
-          _id: a._id,
+          id: a.id,
+          _id: a.id,
           rowIndex: a.rowIndex,
           issueType: a.issueType,
           description: a.description,
@@ -203,9 +230,6 @@ router.post('/:id/import/confirm', auth, async (req, res, next) => {
     // -----------------------------------------------------------------------
     // Step 2: Build the set of rejected row indices
     // -----------------------------------------------------------------------
-
-    // Collect rowIndices that have at least one REJECTED anomaly
-    // and anomalies that result in skipping (MISSING_FIELDS, INVALID_DATE, etc.)
     const rejectedRows = new Set();
     const skipAnomalyTypes = [
       'MISSING_FIELDS',
@@ -218,7 +242,6 @@ router.post('/:id/import/confirm', auth, async (req, res, next) => {
       if (anomaly.status === 'rejected') {
         rejectedRows.add(anomaly.rowIndex);
       }
-      // For hard-skip anomalies, always skip regardless of decision
       if (
         skipAnomalyTypes.includes(anomaly.issueType) &&
         anomaly.status !== 'approved'
@@ -237,12 +260,15 @@ router.post('/:id/import/confirm', auth, async (req, res, next) => {
     // -----------------------------------------------------------------------
     // Step 3: Fetch member map for userId resolution
     // -----------------------------------------------------------------------
-    const members = await GroupMember.find({ groupId }).populate('userId', 'name email');
+    const members = await GroupMember.findAll({
+      where: { groupId },
+      include: [{ model: User, as: 'User', attributes: ['id', 'name', 'email'] }],
+    });
     const memberNameMap = new Map();
     for (const member of members) {
-      if (!member.userId) continue;
-      memberNameMap.set(normalizeName(member.userId.name), {
-        userId: member.userId._id,
+      if (!member.User) continue;
+      memberNameMap.set(normalizeName(member.User.name), {
+        userId: member.User.id,
         member,
       });
     }
@@ -272,8 +298,8 @@ router.post('/:id/import/confirm', auth, async (req, res, next) => {
         // Resolve paidBy userId
         let payerUserId = row.paidBy;
 
-        // If paidBy is not a valid ObjectId, try to resolve by name
-        if (typeof payerUserId === 'string' && payerUserId.length !== 24) {
+        // If paidBy is not a valid UUID, try to resolve by name
+        if (typeof payerUserId === 'string' && !isUUID(payerUserId)) {
           const payerInfo = memberNameMap.get(normalizeName(row.paidByName || payerUserId));
           if (payerInfo) {
             payerUserId = payerInfo.userId;
@@ -344,8 +370,9 @@ router.post('/:id/import/confirm', auth, async (req, res, next) => {
                 ? Math.round(remaining * 100) / 100
                 : perPerson;
               remaining -= share;
+              const uId = m.userId && m.userId.id ? m.userId.id : m.userId;
               return {
-                userId: m.userId._id || m.userId,
+                userId: uId,
                 amount: share,
               };
             });
@@ -353,7 +380,7 @@ router.post('/:id/import/confirm', auth, async (req, res, next) => {
         } else if (row.splitType === 'EXACT' && row.splitDetails?.length > 0) {
           splits = row.splitDetails.map((s) => ({
             userId: s.userId,
-            amount: s.value,
+            amount: Math.round((s.value * (row.exchangeRateUsed || 1)) * 100) / 100,
           }));
         } else if (row.splitType === 'PERCENTAGE' && row.splitDetails?.length > 0) {
           splits = row.splitDetails.map((s) => ({
@@ -403,8 +430,9 @@ router.post('/:id/import/confirm', auth, async (req, res, next) => {
                 ? Math.round(remaining * 100) / 100
                 : perPerson;
               remaining -= share;
+              const uId = m.userId && m.userId.id ? m.userId.id : m.userId;
               return {
-                userId: m.userId._id || m.userId,
+                userId: uId,
                 amount: share,
               };
             });
@@ -421,25 +449,36 @@ router.post('/:id/import/confirm', auth, async (req, res, next) => {
           continue;
         }
 
-        // Create the Expense document
-        const expense = await Expense.create({
-          groupId,
-          description: row.description || 'Imported expense',
-          amount: row.amount,
-          currency: row.currency || 'INR',
-          amountInINR: row.amountInINR,
-          exchangeRateUsed: row.exchangeRateUsed || 1,
-          date: expenseDate,
-          paidBy: payerUserId,
-          splitType: row.splitType || 'EQUAL',
-          splits,
-          isSettlement: row.isSettlement || false,
-          isDeleted: false,
-          importRowIndex: row.rowIndex,
-          notes: row.notes || `Imported from CSV row ${row.rowIndex}`,
+        // Create the Expense & Splits within a database transaction
+        const expense = await sequelize.transaction(async (t) => {
+          const exp = await Expense.create({
+            groupId,
+            description: row.description || 'Imported expense',
+            amount: row.amount,
+            currency: row.currency || 'INR',
+            amountInINR: row.amountInINR,
+            exchangeRateUsed: row.exchangeRateUsed || 1,
+            date: expenseDate,
+            paidBy: payerUserId,
+            splitType: row.splitType || 'EQUAL',
+            isSettlement: row.isSettlement || false,
+            isDeleted: false,
+            importRowIndex: row.rowIndex,
+            notes: row.notes || `Imported from CSV row ${row.rowIndex}`,
+          }, { transaction: t });
+
+          const splitRecords = splits.map((s) => ({
+            expenseId: exp.id,
+            userId: s.userId,
+            amount: s.amount,
+          }));
+
+          await ExpenseSplit.bulkCreate(splitRecords, { transaction: t });
+
+          return exp;
         });
 
-        createdExpenses.push(expense._id);
+        createdExpenses.push(expense.id);
         successCount++;
       } catch (err) {
         errors.push({
@@ -480,11 +519,22 @@ router.post('/:id/import/confirm', auth, async (req, res, next) => {
 // ---------------------------------------------------------------------------
 router.get('/:id/import/logs', auth, async (req, res, next) => {
   try {
-    const logs = await ImportLog.find({ groupId: req.params.id })
-      .populate('uploadedBy', 'name email')
-      .sort({ importedAt: -1 });
+    const logs = await ImportLog.findAll({
+      where: { groupId: req.params.id },
+      include: [{ model: User, as: 'Uploader', attributes: ['id', 'name', 'email'] }],
+      order: [['importedAt', 'DESC']],
+    });
 
-    res.json({ logs });
+    const formattedLogs = logs.map((log) => {
+      const json = log.get({ plain: true });
+      return {
+        ...json,
+        uploadedBy: json.Uploader || json.uploadedBy,
+        Uploader: undefined,
+      };
+    });
+
+    res.json({ logs: formattedLogs });
   } catch (error) {
     next(error);
   }

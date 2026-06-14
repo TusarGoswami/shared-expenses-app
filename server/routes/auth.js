@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const { User } = require('../models');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
@@ -27,7 +27,7 @@ router.post('/register', async (req, res, next) => {
     }
 
     // Check for existing user
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    const existingUser = await User.findOne({ where: { email: email.toLowerCase().trim() } });
     if (existingUser) {
       return res.status(409).json({
         message: 'An account with this email already exists',
@@ -47,7 +47,7 @@ router.post('/register', async (req, res, next) => {
 
     // Generate JWT
     const token = jwt.sign(
-      { userId: user._id, email: user.email },
+      { userId: user.id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -56,7 +56,8 @@ router.post('/register', async (req, res, next) => {
       message: 'Registration successful',
       token,
       user: {
-        id: user._id,
+        id: user.id,
+        _id: user.id,
         name: user.name,
         email: user.email,
       },
@@ -81,7 +82,7 @@ router.post('/login', async (req, res, next) => {
     }
 
     // Find user (need passwordHash for comparison)
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    const user = await User.findOne({ where: { email: email.toLowerCase().trim() } });
     if (!user) {
       return res.status(401).json({
         message: 'Invalid email or password',
@@ -98,7 +99,7 @@ router.post('/login', async (req, res, next) => {
 
     // Generate JWT
     const token = jwt.sign(
-      { userId: user._id, email: user.email },
+      { userId: user.id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -107,7 +108,8 @@ router.post('/login', async (req, res, next) => {
       message: 'Login successful',
       token,
       user: {
-        id: user._id,
+        id: user.id,
+        _id: user.id,
         name: user.name,
         email: user.email,
       },
@@ -122,13 +124,14 @@ router.post('/login', async (req, res, next) => {
 // ---------------------------------------------------------------------------
 router.get('/me', auth, async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.userId);
+    const user = await User.findByPk(req.user.userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
     res.json({
       user: {
-        id: user._id,
+        id: user.id,
+        _id: user.id,
         name: user.name,
         email: user.email,
       },

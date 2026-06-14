@@ -1,10 +1,20 @@
 const express = require('express');
 const auth = require('../middleware/auth');
-const Group = require('../models/Group');
-const GroupMember = require('../models/GroupMember');
-const User = require('../models/User');
+const { Group, GroupMember, User, Expense } = require('../models');
 
 const router = express.Router();
+
+// Helper to format Group response to match Mongoose populate('createdBy')
+const formatGroup = (group) => {
+  if (!group) return null;
+  const json = group.get({ plain: true });
+  return {
+    ...json,
+    _id: json.id,
+    createdBy: json.Creator ? { ...json.Creator, _id: json.Creator.id } : json.createdBy,
+    Creator: undefined,
+  };
+};
 
 // ---------------------------------------------------------------------------
 // GET /api/groups — list all groups the logged-in user belongs to
@@ -12,25 +22,32 @@ const router = express.Router();
 router.get('/', auth, async (req, res, next) => {
   try {
     // Find all group memberships for this user
-    const memberships = await GroupMember.find({ userId: req.user.userId });
+    const memberships = await GroupMember.findAll({ where: { userId: req.user.userId } });
     const groupIds = memberships.map((m) => m.groupId);
 
-    const groups = await Group.find({ _id: { $in: groupIds } })
-      .populate('createdBy', 'name email')
-      .sort({ createdAt: -1 });
+    const groups = await Group.findAll({
+      where: { id: groupIds },
+      include: [{ model: User, as: 'Creator', attributes: ['id', 'name', 'email'] }],
+      order: [['createdAt', 'DESC']],
+    });
 
     // Attach member count and expense count to each group
-    const Expense = require('../models/Expense');
     const groupsWithCounts = await Promise.all(
       groups.map(async (group) => {
-        const memberCount = await GroupMember.countDocuments({
-          groupId: group._id,
+        const memberCount = await GroupMember.count({
+          where: { groupId: group.id },
         });
-        const expenseCount = await Expense.countDocuments({
-          groupId: group._id,
-          isDeleted: false,
+        const expenseCount = await Expense.count({
+          where: {
+            groupId: group.id,
+            isDeleted: false,
+          },
         });
-        return { ...group.toObject(), memberCount, expenseCount };
+        return {
+          ...formatGroup(group),
+          memberCount,
+          expenseCount,
+        };
       })
     );
 
@@ -59,18 +76,17 @@ router.post('/', auth, async (req, res, next) => {
 
     // Auto-add the creator as a member with today as join date
     await GroupMember.create({
-      groupId: group._id,
+      groupId: group.id,
       userId: req.user.userId,
       joinDate: new Date(),
       addedBy: req.user.userId,
     });
 
-    const populated = await Group.findById(group._id).populate(
-      'createdBy',
-      'name email'
-    );
+    const populated = await Group.findByPk(group.id, {
+      include: [{ model: User, as: 'Creator', attributes: ['id', 'name', 'email'] }],
+    });
 
-    res.status(201).json({ group: populated });
+    res.status(201).json({ group: formatGroup(populated) });
   } catch (error) {
     next(error);
   }
@@ -81,18 +97,17 @@ router.post('/', auth, async (req, res, next) => {
 // ---------------------------------------------------------------------------
 router.get('/:id', auth, async (req, res, next) => {
   try {
-    const group = await Group.findById(req.params.id).populate(
-      'createdBy',
-      'name email'
-    );
+    const group = await Group.findByPk(req.params.id, {
+      include: [{ model: User, as: 'Creator', attributes: ['id', 'name', 'email'] }],
+    });
 
     if (!group) {
       return res.status(404).json({ message: 'Group not found' });
     }
 
-    const members = await GroupMember.getAllMembers(group._id);
+    const members = await GroupMember.getAllMembers(group.id);
 
-    res.json({ group, members });
+    res.json({ group: formatGroup(group), members });
   } catch (error) {
     next(error);
   }
@@ -105,7 +120,9 @@ router.put('/:id', auth, async (req, res, next) => {
   try {
     const { name, description } = req.body;
 
-    const group = await Group.findById(req.params.id);
+    const group = await Group.findByPk(req.params.id, {
+      include: [{ model: User, as: 'Creator', attributes: ['id', 'name', 'email'] }],
+    });
     if (!group) {
       return res.status(404).json({ message: 'Group not found' });
     }
@@ -115,7 +132,7 @@ router.put('/:id', auth, async (req, res, next) => {
 
     await group.save();
 
-    res.json({ group });
+    res.json({ group: formatGroup(group) });
   } catch (error) {
     next(error);
   }
@@ -128,7 +145,7 @@ router.post('/:id/members', auth, async (req, res, next) => {
   try {
     const { userId, email, name, joinDate } = req.body;
 
-    const group = await Group.findById(req.params.id);
+    const group = await Group.findByPk(req.params.id);
     if (!group) {
       return res.status(404).json({ message: 'Group not found' });
     }
@@ -137,7 +154,7 @@ router.post('/:id/members', auth, async (req, res, next) => {
 
     // If userId not provided, look up by email or create a placeholder user
     if (!targetUserId && email) {
-      let user = await User.findOne({ email: email.toLowerCase().trim() });
+      let user = await User.findOne({ where: { email: email.toLowerCase().trim() } });
       if (!user && name) {
         // Create a user account (they can set password later)
         const bcrypt = require('bcryptjs');
@@ -154,7 +171,7 @@ router.post('/:id/members', auth, async (req, res, next) => {
           .status(400)
           .json({ message: 'Provide a valid userId or email (+ name) to add' });
       }
-      targetUserId = user._id;
+      targetUserId = user.id;
     }
 
     if (!targetUserId) {
@@ -163,26 +180,34 @@ router.post('/:id/members', auth, async (req, res, next) => {
 
     // Check if already a member
     const existing = await GroupMember.findOne({
-      groupId: group._id,
-      userId: targetUserId,
+      where: {
+        groupId: group.id,
+        userId: targetUserId,
+      },
     });
     if (existing) {
       return res.status(409).json({ message: 'User is already a member of this group' });
     }
 
     const member = await GroupMember.create({
-      groupId: group._id,
+      groupId: group.id,
       userId: targetUserId,
       joinDate: joinDate ? new Date(joinDate) : new Date(),
       addedBy: req.user.userId,
     });
 
-    const populated = await GroupMember.findById(member._id).populate(
-      'userId',
-      'name email'
-    );
+    const populated = await GroupMember.findByPk(member.id, {
+      include: [{ model: User, as: 'User', attributes: ['id', 'name', 'email'] }],
+    });
 
-    res.status(201).json({ member: populated });
+    const formattedMember = {
+      ...populated.get({ plain: true }),
+      _id: populated.id,
+      userId: populated.User ? { ...populated.User, _id: populated.User.id } : populated.userId,
+      User: undefined,
+    };
+
+    res.status(201).json({ member: formattedMember });
   } catch (error) {
     next(error);
   }
@@ -196,8 +221,10 @@ router.put('/:id/members/:userId', auth, async (req, res, next) => {
     const { leaveDate, joinDate } = req.body;
 
     const member = await GroupMember.findOne({
-      groupId: req.params.id,
-      userId: req.params.userId,
+      where: {
+        groupId: req.params.id,
+        userId: req.params.userId,
+      },
     });
 
     if (!member) {
@@ -213,12 +240,18 @@ router.put('/:id/members/:userId', auth, async (req, res, next) => {
 
     await member.save();
 
-    const populated = await GroupMember.findById(member._id).populate(
-      'userId',
-      'name email'
-    );
+    const populated = await GroupMember.findByPk(member.id, {
+      include: [{ model: User, as: 'User', attributes: ['id', 'name', 'email'] }],
+    });
 
-    res.json({ member: populated });
+    const formattedMember = {
+      ...populated.get({ plain: true }),
+      _id: populated.id,
+      userId: populated.User ? { ...populated.User, _id: populated.User.id } : populated.userId,
+      User: undefined,
+    };
+
+    res.json({ member: formattedMember });
   } catch (error) {
     next(error);
   }
