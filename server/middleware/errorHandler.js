@@ -5,27 +5,27 @@
 const errorHandler = (err, _req, res, _next) => {
   console.error('❌ Error:', err.message);
 
-  // Mongoose validation error
-  if (err.name === 'ValidationError') {
-    const messages = Object.values(err.errors).map((e) => e.message);
+  // Sequelize validation error
+  if (err.name === 'SequelizeValidationError') {
+    const messages = err.errors.map((e) => e.message);
     return res.status(400).json({
       message: 'Validation error',
       errors: messages,
     });
   }
 
-  // Mongoose duplicate key error
-  if (err.code === 11000) {
-    const field = Object.keys(err.keyPattern)[0];
+  // Sequelize duplicate key error
+  if (err.name === 'SequelizeUniqueConstraintError') {
+    const field = err.errors && err.errors[0] ? err.errors[0].path : 'field';
     return res.status(409).json({
       message: `Duplicate value for field: ${field}`,
     });
   }
 
-  // Mongoose cast error (invalid ObjectId, etc.)
-  if (err.name === 'CastError') {
+  // Sequelize database/cast errors (invalid UUID formatting, etc.)
+  if (err.name === 'SequelizeDatabaseError' && err.message.includes('invalid input syntax for type uuid')) {
     return res.status(400).json({
-      message: `Invalid ${err.path}: ${err.value}`,
+      message: 'Invalid ID format. Expected a valid UUID.',
     });
   }
 

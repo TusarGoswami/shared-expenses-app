@@ -1,51 +1,20 @@
-const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
-const User = require('../models/User');
-const Group = require('../models/Group');
-const GroupMember = require('../models/GroupMember');
-const Expense = require('../models/Expense');
-const ImportLog = require('../models/ImportLog');
+const { sequelize, User, Group, GroupMember } = require('../models');
 
 const seedData = async () => {
   try {
-    const mongoUri = process.env.MONGO_URI;
-    if (!mongoUri) {
-      console.error('❌ MONGO_URI is missing in .env file!');
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) {
+      console.error('❌ DATABASE_URL is missing in .env file!');
       process.exit(1);
     }
 
-    console.log('Connecting to database...');
-    await mongoose.connect(mongoUri);
-    console.log('✅ Connected to MongoDB');
-
-    // Clean existing database records for flatmates to avoid conflicts
-    console.log('Cleaning existing seed data...');
-    const emails = [
-      'aisha@flatmates.com',
-      'rohan@flatmates.com',
-      'priya@flatmates.com',
-      'meera@flatmates.com',
-      'sam@flatmates.com',
-      'dev@flatmates.com'
-    ];
-    
-    // Find users with these emails
-    const existingUsers = await User.find({ email: { $in: emails } });
-    const userIds = existingUsers.map(u => u._id);
-
-    // Delete groups created by these users or group memberships
-    if (userIds.length > 0) {
-      const groups = await Group.find({ createdBy: { $in: userIds } });
-      const groupIds = groups.map(g => g._id);
-
-      await GroupMember.deleteMany({ groupId: { $in: groupIds } });
-      await Expense.deleteMany({ groupId: { $in: groupIds } });
-      await ImportLog.deleteMany({ groupId: { $in: groupIds } });
-      await Group.deleteMany({ _id: { $in: groupIds } });
-      await User.deleteMany({ _id: { $in: userIds } });
-    }
+    console.log('Connecting and syncing database (force drop)...');
+    await sequelize.authenticate();
+    await sequelize.sync({ force: true });
+    console.log('✅ Connected and synced with database');
 
     console.log('Creating users...');
     const passwordHash = await bcrypt.hash('password123', 12);
@@ -53,37 +22,37 @@ const seedData = async () => {
     const aisha = await User.create({
       name: 'Aisha',
       email: 'aisha@flatmates.com',
-      passwordHash
+      passwordHash,
     });
 
     const rohan = await User.create({
       name: 'Rohan',
       email: 'rohan@flatmates.com',
-      passwordHash
+      passwordHash,
     });
 
     const priya = await User.create({
       name: 'Priya',
       email: 'priya@flatmates.com',
-      passwordHash
+      passwordHash,
     });
 
     const meera = await User.create({
       name: 'Meera',
       email: 'meera@flatmates.com',
-      passwordHash
+      passwordHash,
     });
 
     const sam = await User.create({
       name: 'Sam',
       email: 'sam@flatmates.com',
-      passwordHash
+      passwordHash,
     });
 
     const dev = await User.create({
       name: 'Dev',
       email: 'dev@flatmates.com',
-      passwordHash
+      passwordHash,
     });
 
     console.log('✅ Users created.');
@@ -92,63 +61,63 @@ const seedData = async () => {
     const group = await Group.create({
       name: 'Flat Expenses 2026',
       description: 'Shared expenses for the flat. Meera moved out end of March. Sam moved in mid-April. Dev joined for trip.',
-      createdBy: aisha._id
+      createdBy: aisha.id,
     });
     console.log('✅ Group created.');
 
     console.log('Creating group members...');
     // Aisha: active from Jan 1st, 2026
     await GroupMember.create({
-      groupId: group._id,
-      userId: aisha._id,
+      groupId: group.id,
+      userId: aisha.id,
       joinDate: new Date('2026-01-01'),
       leaveDate: null,
-      addedBy: aisha._id
+      addedBy: aisha.id,
     });
 
     // Rohan: active from Jan 1st, 2026
     await GroupMember.create({
-      groupId: group._id,
-      userId: rohan._id,
+      groupId: group.id,
+      userId: rohan.id,
       joinDate: new Date('2026-01-01'),
       leaveDate: null,
-      addedBy: aisha._id
+      addedBy: aisha.id,
     });
 
     // Priya: active from Jan 1st, 2026
     await GroupMember.create({
-      groupId: group._id,
-      userId: priya._id,
+      groupId: group.id,
+      userId: priya.id,
       joinDate: new Date('2026-01-01'),
       leaveDate: null,
-      addedBy: aisha._id
+      addedBy: aisha.id,
     });
 
     // Meera: active from Jan 1st, 2026 to Mar 31st, 2026
     await GroupMember.create({
-      groupId: group._id,
-      userId: meera._id,
+      groupId: group.id,
+      userId: meera.id,
       joinDate: new Date('2026-01-01'),
       leaveDate: new Date('2026-03-31'),
-      addedBy: aisha._id
+      addedBy: aisha.id,
     });
 
     // Sam: active from Apr 15th, 2026
     await GroupMember.create({
-      groupId: group._id,
-      userId: sam._id,
+      groupId: group.id,
+      userId: sam.id,
       joinDate: new Date('2026-04-15'),
       leaveDate: null,
-      addedBy: aisha._id
+      addedBy: aisha.id,
     });
 
     // Dev: active from Feb 1st, 2026 to Mar 20th, 2026
     await GroupMember.create({
-      groupId: group._id,
-      userId: dev._id,
+      groupId: group.id,
+      userId: dev.id,
       joinDate: new Date('2026-02-01'),
       leaveDate: new Date('2026-03-20'),
-      addedBy: aisha._id
+      addedBy: aisha.id,
     });
 
     console.log('✅ Group members created.');
@@ -158,7 +127,7 @@ const seedData = async () => {
     console.log('You can now log in using Aisha\'s account to test the system:');
     console.log('Email:    aisha@flatmates.com');
     console.log('Password: password123');
-    console.log('Group ID: ' + group._id);
+    console.log('Group ID: ' + group.id);
     console.log('==================================================\n');
 
     process.exit(0);

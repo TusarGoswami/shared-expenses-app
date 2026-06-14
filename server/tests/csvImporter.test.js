@@ -1,40 +1,48 @@
 const { parseAndAnalyzeCSV, parseSplitDetails } = require('../services/csvImporter');
-const GroupMember = require('../models/GroupMember');
+const { GroupMember } = require('../models');
 
-// Mock GroupMember model
-jest.mock('../models/GroupMember');
+// Mock central models module
+jest.mock('../models', () => {
+  const mockGroupMember = {
+    findAll: jest.fn(),
+  };
+  return {
+    GroupMember: mockGroupMember,
+    User: {},
+  };
+});
 
 describe('CSV Importer Service', () => {
   const groupId = '609b5c39c8f9df0015f6ad12';
 
   const mockMembers = [
     {
-      userId: { _id: 'u1', name: 'Aisha', email: 'aisha@flatmates.com' },
+      User: { id: 'u1', name: 'Aisha', email: 'aisha@flatmates.com' },
       joinDate: new Date('2026-01-01'),
       leaveDate: null,
     },
     {
-      userId: { _id: 'u2', name: 'Rohan', email: 'rohan@flatmates.com' },
+      User: { id: 'u2', name: 'Rohan', email: 'rohan@flatmates.com' },
       joinDate: new Date('2026-01-01'),
       leaveDate: null,
     },
     {
-      userId: { _id: 'u3', name: 'Priya', email: 'priya@flatmates.com' },
+      User: { id: 'u3', name: 'Priya', email: 'priya@flatmates.com' },
       joinDate: new Date('2026-01-01'),
       leaveDate: null,
     },
     {
-      userId: { _id: 'u4', name: 'Meera', email: 'meera@flatmates.com' },
+      User: { id: 'u4', name: 'Meera', email: 'meera@flatmates.com' },
       joinDate: new Date('2026-01-01'),
       leaveDate: new Date('2026-03-31'), // Left end of March
     },
     {
-      userId: { _id: 'u5', name: 'Sam', email: 'sam@flatmates.com' },
+      User: { id: 'u5', name: 'Sam', email: 'sam@flatmates.com' },
       joinDate: new Date('2026-04-15'), // Joined mid-April
       leaveDate: null,
     },
     {
-      userId: { _id: 'u6', name: 'Dev', email: 'dev@flatmates.com' },
+      User: { id: 'u6', name: 'Dev', email: 'dev@flatmates.com' },
       joinDate: new Date('2026-02-01'), // Joined Feb
       leaveDate: new Date('2026-03-20'), // Left Mar
     },
@@ -42,9 +50,7 @@ describe('CSV Importer Service', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    GroupMember.find.mockReturnValue({
-      populate: jest.fn().mockResolvedValue(mockMembers),
-    });
+    GroupMember.findAll.mockResolvedValue(mockMembers);
   });
 
   test('should parse valid EQUAL split row without anomalies', async () => {
