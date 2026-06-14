@@ -1,41 +1,59 @@
-const mongoose = require('mongoose');
+module.exports = (sequelize, DataTypes) => {
+  const User = sequelize.define(
+    'User',
+    {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
+      name: {
+        type: DataTypes.STRING(50),
+        allowNull: false,
+        validate: {
+          len: {
+            args: [2, 50],
+            msg: 'Name must be at least 2 characters and at most 50 characters',
+          },
+          notEmpty: { msg: 'Name is required' },
+        },
+      },
+      email: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: {
+          msg: 'Email address already in use',
+        },
+        validate: {
+          isEmail: { msg: 'Please provide a valid email address' },
+          notEmpty: { msg: 'Email is required' },
+        },
+      },
+      passwordHash: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+          notEmpty: { msg: 'Password is required' },
+        },
+      },
+      createdAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+    },
+    {
+      timestamps: true,
+      updatedAt: false,
+    }
+  );
 
-const userSchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: [true, 'Name is required'],
-      trim: true,
-      minlength: [2, 'Name must be at least 2 characters'],
-      maxlength: [50, 'Name must be at most 50 characters'],
-    },
-    email: {
-      type: String,
-      required: [true, 'Email is required'],
-      unique: true,
-      trim: true,
-      lowercase: true,
-      match: [
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-        'Please provide a valid email address',
-      ],
-    },
-    passwordHash: {
-      type: String,
-      required: [true, 'Password is required'],
-    },
-  },
-  {
-    timestamps: { createdAt: 'createdAt', updatedAt: false },
-  }
-);
+  // Customize toJSON to strip passwordHash from responses (Mongoose equivalent)
+  User.prototype.toJSON = function () {
+    const values = { ...this.get() };
+    delete values.passwordHash;
+    return values;
+  };
 
-// Never return passwordHash in JSON responses
-userSchema.methods.toJSON = function () {
-  const obj = this.toObject();
-  delete obj.passwordHash;
-  delete obj.__v;
-  return obj;
+  return User;
 };
-
-module.exports = mongoose.model('User', userSchema);

@@ -1,60 +1,116 @@
-const mongoose = require('mongoose');
+const { Op } = require('sequelize');
 
-const groupMemberSchema = new mongoose.Schema(
-  {
-    groupId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Group',
-      required: [true, 'Group ID is required'],
-      index: true,
+module.exports = (sequelize, DataTypes) => {
+  const GroupMember = sequelize.define(
+    'GroupMember',
+    {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
+      groupId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
+      userId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
+      joinDate: {
+        type: DataTypes.DATE,
+        allowNull: false,
+      },
+      leaveDate: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: null,
+      },
+      addedBy: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
     },
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: [true, 'User ID is required'],
-      index: true,
-    },
-    joinDate: {
-      type: Date,
-      required: [true, 'Join date is required'],
-    },
-    leaveDate: {
-      type: Date,
-      default: null,
-    },
-    addedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-    },
-  },
-  {
-    timestamps: true,
-  }
-);
+    {
+      timestamps: true,
+      indexes: [
+        {
+          unique: true,
+          fields: ['groupId', 'userId'],
+        },
+      ],
+    }
+  );
 
-// Compound index to prevent duplicate memberships
-groupMemberSchema.index({ groupId: 1, userId: 1 }, { unique: true });
+  /**
+   * Static method: find all members who were active on a given date.
+   * A member is active if:
+   *   joinDate <= date  AND  (leaveDate is null OR leaveDate >= date)
+   */
+  GroupMember.getActiveMembers = async function (groupId, date) {
+    const queryDate = new Date(date);
+    const members = await GroupMember.findAll({
+      where: {
+        groupId,
+        joinDate: {
+          [Op.lte]: queryDate,
+        },
+        [Op.or]: [
+          { leaveDate: null },
+          {
+            leaveDate: {
+              [Op.gte]: queryDate,
+            },
+          },
+        ],
+      },
+      include: [
+        {
+          model: sequelize.models.User,
+          as: 'User',
+          attributes: ['id', 'name', 'email'],
+        },
+      ],
+    });
 
-/**
- * Static method: find all members who were active on a given date.
- * A member is active if:
- *   joinDate <= date  AND  (leaveDate is null OR leaveDate >= date)
- */
-groupMemberSchema.statics.getActiveMembers = async function (groupId, date) {
-  const queryDate = new Date(date);
-  return this.find({
-    groupId,
-    joinDate: { $lte: queryDate },
-    $or: [{ leaveDate: null }, { leaveDate: { $gte: queryDate } }],
-  }).populate('userId', 'name email');
+    return members.map((m) => {
+      const json = m.get({ plain: true });
+      const userObj = json.User || json.userId;
+      return {
+        ...json,
+        _id: json.id,
+        userId: userObj ? { ...userObj, _id: userObj.id } : undefined,
+        User: undefined,
+      };
+    });
+  };
+
+  /**
+   * Static method: get ALL members for a group (active + inactive).
+   */
+  GroupMember.getAllMembers = async function (groupId) {
+    const members = await GroupMember.findAll({
+      where: { groupId },
+      include: [
+        {
+          model: sequelize.models.User,
+          as: 'User',
+          attributes: ['id', 'name', 'email'],
+        },
+      ],
+    });
+
+    return members.map((m) => {
+      const json = m.get({ plain: true });
+      const userObj = json.User || json.userId;
+      return {
+        ...json,
+        _id: json.id,
+        userId: userObj ? { ...userObj, _id: userObj.id } : undefined,
+        User: undefined,
+      };
+    });
+  };
+
+  return GroupMember;
 };
-
-/**
- * Static method: get ALL members for a group (active + inactive).
- */
-groupMemberSchema.statics.getAllMembers = async function (groupId) {
-  return this.find({ groupId }).populate('userId', 'name email');
-};
-
-module.exports = mongoose.model('GroupMember', groupMemberSchema);

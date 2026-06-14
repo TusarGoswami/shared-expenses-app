@@ -1,29 +1,48 @@
-const mongoose = require('mongoose');
+module.exports = (sequelize, DataTypes) => {
+  const Group = sequelize.define(
+    'Group',
+    {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
+      name: {
+        type: DataTypes.STRING(100),
+        allowNull: false,
+        validate: {
+          len: {
+            args: [2, 100],
+            msg: 'Group name must be between 2 and 100 characters',
+          },
+          notEmpty: { msg: 'Group name is required' },
+        },
+      },
+      description: {
+        type: DataTypes.STRING(500),
+        defaultValue: '',
+        validate: {
+          len: {
+            args: [0, 500],
+            msg: 'Description must be at most 500 characters',
+          },
+        },
+      },
+      createdBy: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
+      createdAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+    },
+    {
+      timestamps: true,
+      updatedAt: false,
+    }
+  );
 
-const groupSchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: [true, 'Group name is required'],
-      trim: true,
-      minlength: [2, 'Group name must be at least 2 characters'],
-      maxlength: [100, 'Group name must be at most 100 characters'],
-    },
-    description: {
-      type: String,
-      trim: true,
-      maxlength: [500, 'Description must be at most 500 characters'],
-      default: '',
-    },
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: [true, 'Group creator is required'],
-    },
-  },
-  {
-    timestamps: { createdAt: 'createdAt', updatedAt: false },
-  }
-);
-
-module.exports = mongoose.model('Group', groupSchema);
+  return Group;
+};

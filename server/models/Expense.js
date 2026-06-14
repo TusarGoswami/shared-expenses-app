@@ -1,102 +1,98 @@
-const mongoose = require('mongoose');
-
-const splitEntrySchema = new mongoose.Schema(
-  {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-    },
-    amount: {
-      type: Number,
-      required: true,
-    },
-  },
-  { _id: false }
-);
-
-const expenseSchema = new mongoose.Schema(
-  {
-    groupId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Group',
-      required: [true, 'Group ID is required'],
-      index: true,
-    },
-    description: {
-      type: String,
-      required: [true, 'Description is required'],
-      trim: true,
-      maxlength: [300, 'Description must be at most 300 characters'],
-    },
-    amount: {
-      type: Number,
-      required: [true, 'Amount is required'],
-    },
-    currency: {
-      type: String,
-      enum: ['INR', 'USD'],
-      default: 'INR',
-    },
-    amountInINR: {
-      type: Number,
-      required: [true, 'Amount in INR is required'],
-    },
-    exchangeRateUsed: {
-      type: Number,
-      default: 1,
-    },
-    date: {
-      type: Date,
-      required: [true, 'Expense date is required'],
-      index: true,
-    },
-    paidBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: [true, 'Payer is required'],
-    },
-    splitType: {
-      type: String,
-      enum: ['EQUAL', 'EXACT', 'PERCENTAGE', 'SHARES'],
-      required: [true, 'Split type is required'],
-    },
-    splits: {
-      type: [splitEntrySchema],
-      validate: {
-        validator: function (arr) {
-          return arr.length > 0;
+module.exports = (sequelize, DataTypes) => {
+  const Expense = sequelize.define(
+    'Expense',
+    {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
+      groupId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
+      description: {
+        type: DataTypes.STRING(300),
+        allowNull: false,
+        validate: {
+          len: {
+            args: [1, 300],
+            msg: 'Description must be between 1 and 300 characters',
+          },
+          notEmpty: { msg: 'Description is required' },
         },
-        message: 'At least one split entry is required',
+      },
+      amount: {
+        type: DataTypes.DECIMAL(12, 2),
+        allowNull: false,
+        get() {
+          const rawValue = this.getDataValue('amount');
+          return rawValue === null ? null : parseFloat(rawValue);
+        },
+      },
+      currency: {
+        type: DataTypes.ENUM('INR', 'USD'),
+        defaultValue: 'INR',
+      },
+      amountInINR: {
+        type: DataTypes.DECIMAL(12, 2),
+        allowNull: false,
+        get() {
+          const rawValue = this.getDataValue('amountInINR');
+          return rawValue === null ? null : parseFloat(rawValue);
+        },
+      },
+      exchangeRateUsed: {
+        type: DataTypes.DECIMAL(12, 4),
+        defaultValue: 1.0,
+        get() {
+          const rawValue = this.getDataValue('exchangeRateUsed');
+          return rawValue === null ? null : parseFloat(rawValue);
+        },
+      },
+      date: {
+        type: DataTypes.DATE,
+        allowNull: false,
+      },
+      paidBy: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
+      splitType: {
+        type: DataTypes.ENUM('EQUAL', 'EXACT', 'PERCENTAGE', 'SHARES'),
+        allowNull: false,
+      },
+      isSettlement: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
+      isDeleted: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
+      importRowIndex: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: null,
+      },
+      notes: {
+        type: DataTypes.STRING(500),
+        defaultValue: '',
       },
     },
-    isSettlement: {
-      type: Boolean,
-      default: false,
-    },
-    isDeleted: {
-      type: Boolean,
-      default: false,
-      index: true,
-    },
-    importRowIndex: {
-      type: Number,
-      default: null,
-    },
-    notes: {
-      type: String,
-      trim: true,
-      maxlength: [500, 'Notes must be at most 500 characters'],
-      default: '',
-    },
-  },
-  {
-    timestamps: { createdAt: 'createdAt', updatedAt: false },
-  }
-);
+    {
+      timestamps: true,
+      updatedAt: false,
+      indexes: [
+        {
+          fields: ['groupId', 'isDeleted', 'date'],
+        },
+        {
+          fields: ['groupId', 'paidBy'],
+        },
+      ],
+    }
+  );
 
-// Compound indexes for common queries
-expenseSchema.index({ groupId: 1, isDeleted: 1, date: -1 });
-expenseSchema.index({ groupId: 1, paidBy: 1 });
-
-module.exports = mongoose.model('Expense', expenseSchema);
+  return Expense;
+};
