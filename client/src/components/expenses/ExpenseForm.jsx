@@ -115,10 +115,10 @@ export default function ExpenseForm({ groupId, members, onClose, onCreated }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative glass-card p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto animate-scale-in">
-        <div className="flex items-center justify-between mb-6">
+    <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center p-4 pt-10 sm:pt-16">
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative glass-card p-6 w-full max-w-lg animate-scale-in my-8">
+        <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-white">
             {form.isSettlement ? 'Record Settlement' : 'Add Expense'}
           </h2>
@@ -127,7 +127,7 @@ export default function ExpenseForm({ groupId, members, onClose, onCreated }) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           {/* Settlement toggle */}
           <label className="flex items-center gap-3 cursor-pointer">
             <input

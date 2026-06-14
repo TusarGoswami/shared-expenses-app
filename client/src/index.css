@@ -136,13 +136,13 @@
   .input-field {
     background-color: #0d1424;
     border: 1px solid rgba(0, 212, 255, 0.2);
-    @apply w-full px-4 py-2.5 text-white placeholder-slate-500 rounded-xl
+    @apply w-full px-4 py-2 text-white placeholder-slate-500 rounded-xl
            focus:outline-none focus:border-[#00d4ff] focus:ring-2 focus:ring-[#00d4ff]/20
            transition-all duration-200;
   }
 
   .label-text {
-    @apply block text-sm font-semibold text-slate-300 mb-1.5;
+    @apply block text-sm font-semibold text-slate-300 mb-1;
   }
 
   /* Tabular numbers and currency monospace */
