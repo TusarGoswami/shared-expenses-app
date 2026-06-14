@@ -1,5 +1,25 @@
 # SplitLedger — Shared Expenses Tracker
 
+## 🚀 Try it Live
+
+Check out the live deployment here: [YOUR_VERCEL_URL](YOUR_VERCEL_URL)
+
+### Demo Accounts
+Here are the pre-configured accounts you can use to test the application immediately:
+
+| Name | Email | Password |
+| :--- | :--- | :--- |
+| **Aisha** | `aisha@flatmates.com` | `password123` |
+| Rohan | `rohan@flatmates.com` | `password123` |
+| Priya | `priya@flatmates.com` | `password123` |
+| Meera | `meera@flatmates.com` | `password123` |
+| Sam | `sam@flatmates.com` | `password123` |
+| Dev | `dev@flatmates.com` | `password123` |
+
+We recommend logging in as Aisha — she has the most complete view of all expenses.
+
+---
+
 So here's the backstory. Four flatmates — Aisha, Rohan, Priya, and Meera — were sharing a flat and tracking expenses in a CSV spreadsheet. Dev tagged along for a trip and got added temporarily. Then Meera moved out at the end of March. Sam moved in mid-April. The spreadsheet turned into a mess pretty fast: duplicate rows, dollar amounts mixed in with rupees (Priya kept paying for Netflix in USD), and someone logged a settlement as a regular expense. Nobody knew who owed whom anymore.
 
 This app was built to import that exact CSV, catch all those problems automatically, let the user review and fix each one, and then show clean balances with settlement suggestions. It handles the tricky stuff — like knowing that Sam shouldn't be included in any expense before his join date, or that Meera's post-March expenses need to be flagged, not silently ignored.
