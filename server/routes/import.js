@@ -308,28 +308,48 @@ router.post('/:id/import/confirm', auth, async (req, res, next) => {
             continue;
           }
         } else if (row.splitType === 'EQUAL') {
-          // Get active members at expense date
-          const activeMembers = await GroupMember.getActiveMembers(groupId, expenseDate);
-          if (activeMembers.length === 0) {
-            errors.push({
-              rowIndex: row.rowIndex,
-              error: 'No active members on expense date for EQUAL split',
-            });
-            skippedCount++;
-            continue;
+          let splitMembers = [];
+          if (row.splitWith && row.splitWith.length > 0) {
+            splitMembers = row.splitWith.filter(m => m.userId !== null);
           }
-          const perPerson = Math.round((row.amountInINR / activeMembers.length) * 100) / 100;
-          let remaining = row.amountInINR;
-          splits = activeMembers.map((m, idx) => {
-            const share = idx === activeMembers.length - 1
-              ? Math.round(remaining * 100) / 100
-              : perPerson;
-            remaining -= share;
-            return {
-              userId: m.userId._id || m.userId,
-              amount: share,
-            };
-          });
+
+          if (splitMembers.length > 0) {
+            const perPerson = Math.round((row.amountInINR / splitMembers.length) * 100) / 100;
+            let remaining = row.amountInINR;
+            splits = splitMembers.map((m, idx) => {
+              const share = idx === splitMembers.length - 1
+                ? Math.round(remaining * 100) / 100
+                : perPerson;
+              remaining -= share;
+              return {
+                userId: m.userId,
+                amount: share,
+              };
+            });
+          } else {
+            // Get active members at expense date
+            const activeMembers = await GroupMember.getActiveMembers(groupId, expenseDate);
+            if (activeMembers.length === 0) {
+              errors.push({
+                rowIndex: row.rowIndex,
+                error: 'No active members on expense date for EQUAL split',
+              });
+              skippedCount++;
+              continue;
+            }
+            const perPerson = Math.round((row.amountInINR / activeMembers.length) * 100) / 100;
+            let remaining = row.amountInINR;
+            splits = activeMembers.map((m, idx) => {
+              const share = idx === activeMembers.length - 1
+                ? Math.round(remaining * 100) / 100
+                : perPerson;
+              remaining -= share;
+              return {
+                userId: m.userId._id || m.userId,
+                amount: share,
+              };
+            });
+          }
         } else if (row.splitType === 'EXACT' && row.splitDetails?.length > 0) {
           splits = row.splitDetails.map((s) => ({
             userId: s.userId,
@@ -347,28 +367,48 @@ router.post('/:id/import/confirm', auth, async (req, res, next) => {
             amount: Math.round((row.amountInINR * (s.value / totalShares)) * 100) / 100,
           }));
         } else {
-          // Default to EQUAL split among all active members
-          const activeMembers = await GroupMember.getActiveMembers(groupId, expenseDate);
-          if (activeMembers.length === 0) {
-            errors.push({
-              rowIndex: row.rowIndex,
-              error: 'No active members on expense date for default split',
-            });
-            skippedCount++;
-            continue;
+          // Default to EQUAL split (checking split_with first)
+          let splitMembers = [];
+          if (row.splitWith && row.splitWith.length > 0) {
+            splitMembers = row.splitWith.filter(m => m.userId !== null);
           }
-          const perPerson = Math.round((row.amountInINR / activeMembers.length) * 100) / 100;
-          let remaining = row.amountInINR;
-          splits = activeMembers.map((m, idx) => {
-            const share = idx === activeMembers.length - 1
-              ? Math.round(remaining * 100) / 100
-              : perPerson;
-            remaining -= share;
-            return {
-              userId: m.userId._id || m.userId,
-              amount: share,
-            };
-          });
+
+          if (splitMembers.length > 0) {
+            const perPerson = Math.round((row.amountInINR / splitMembers.length) * 100) / 100;
+            let remaining = row.amountInINR;
+            splits = splitMembers.map((m, idx) => {
+              const share = idx === splitMembers.length - 1
+                ? Math.round(remaining * 100) / 100
+                : perPerson;
+              remaining -= share;
+              return {
+                userId: m.userId,
+                amount: share,
+              };
+            });
+          } else {
+            const activeMembers = await GroupMember.getActiveMembers(groupId, expenseDate);
+            if (activeMembers.length === 0) {
+              errors.push({
+                rowIndex: row.rowIndex,
+                error: 'No active members on expense date for default split',
+              });
+              skippedCount++;
+              continue;
+            }
+            const perPerson = Math.round((row.amountInINR / activeMembers.length) * 100) / 100;
+            let remaining = row.amountInINR;
+            splits = activeMembers.map((m, idx) => {
+              const share = idx === activeMembers.length - 1
+                ? Math.round(remaining * 100) / 100
+                : perPerson;
+              remaining -= share;
+              return {
+                userId: m.userId._id || m.userId,
+                amount: share,
+              };
+            });
+          }
         }
 
         // Validate splits have at least one entry

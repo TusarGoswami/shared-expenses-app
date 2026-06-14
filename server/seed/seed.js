@@ -90,64 +90,64 @@ const seedData = async () => {
 
     console.log('Creating group...');
     const group = await Group.create({
-      name: 'Flat Expenses 2024',
-      description: 'Shared expenses for the flat. Meera moved out end of March. Sam moved in mid-April. Dev joined for a trip in May.',
+      name: 'Flat Expenses 2026',
+      description: 'Shared expenses for the flat. Meera moved out end of March. Sam moved in mid-April. Dev joined for trip.',
       createdBy: aisha._id
     });
     console.log('✅ Group created.');
 
     console.log('Creating group members...');
-    // Aisha: active from Jan 1st, 2024
+    // Aisha: active from Jan 1st, 2026
     await GroupMember.create({
       groupId: group._id,
       userId: aisha._id,
-      joinDate: new Date('2024-01-01'),
+      joinDate: new Date('2026-01-01'),
       leaveDate: null,
       addedBy: aisha._id
     });
 
-    // Rohan: active from Jan 1st, 2024
+    // Rohan: active from Jan 1st, 2026
     await GroupMember.create({
       groupId: group._id,
       userId: rohan._id,
-      joinDate: new Date('2024-01-01'),
+      joinDate: new Date('2026-01-01'),
       leaveDate: null,
       addedBy: aisha._id
     });
 
-    // Priya: active from Jan 1st, 2024
+    // Priya: active from Jan 1st, 2026
     await GroupMember.create({
       groupId: group._id,
       userId: priya._id,
-      joinDate: new Date('2024-01-01'),
+      joinDate: new Date('2026-01-01'),
       leaveDate: null,
       addedBy: aisha._id
     });
 
-    // Meera: active from Jan 1st, 2024 to Mar 31st, 2024
+    // Meera: active from Jan 1st, 2026 to Mar 31st, 2026
     await GroupMember.create({
       groupId: group._id,
       userId: meera._id,
-      joinDate: new Date('2024-01-01'),
-      leaveDate: new Date('2024-03-31'),
+      joinDate: new Date('2026-01-01'),
+      leaveDate: new Date('2026-03-31'),
       addedBy: aisha._id
     });
 
-    // Sam: active from Apr 15th, 2024
+    // Sam: active from Apr 15th, 2026
     await GroupMember.create({
       groupId: group._id,
       userId: sam._id,
-      joinDate: new Date('2024-04-15'),
+      joinDate: new Date('2026-04-15'),
       leaveDate: null,
       addedBy: aisha._id
     });
 
-    // Dev: active only for a trip in May (May 10 to May 20)
+    // Dev: active from Feb 1st, 2026 to Mar 20th, 2026
     await GroupMember.create({
       groupId: group._id,
       userId: dev._id,
-      joinDate: new Date('2024-05-10'),
-      leaveDate: new Date('2024-05-20'),
+      joinDate: new Date('2026-02-01'),
+      leaveDate: new Date('2026-03-20'),
       addedBy: aisha._id
     });
 

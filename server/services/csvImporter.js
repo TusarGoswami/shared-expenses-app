@@ -87,23 +87,31 @@ function parseSplitDetails(raw) {
     return [];
   }
 
-  const parts = raw.split(',').map((p) => p.trim()).filter(Boolean);
+  // Split by semicolon or comma
+  const parts = raw.split(/[;,]/).map((p) => p.trim()).filter(Boolean);
   const result = [];
 
   for (const part of parts) {
-    const colonIdx = part.lastIndexOf(':');
-    if (colonIdx === -1) continue;
-
-    const name = part.substring(0, colonIdx).trim();
-    const valueStr = part.substring(colonIdx + 1).trim();
-    const value = parseFloat(valueStr);
-
-    if (name && !isNaN(value)) {
-      result.push({ name, value });
+    // Match name, separator (colon or space), numeric value, and optional % sign
+    const match = part.match(/^(.*?)\s*[:\s]\s*(-?[\d.]+)\s*%?$/);
+    if (match) {
+      const name = match[1].trim();
+      const value = parseFloat(match[2]);
+      if (name && !isNaN(value)) {
+        result.push({ name, value });
+      }
     }
   }
 
   return result;
+}
+
+function parseSplitWith(raw) {
+  if (!raw || typeof raw !== 'string' || raw.trim() === '') {
+    return [];
+  }
+  // Split by semicolon or comma
+  return raw.split(/[;,]/).map((p) => p.trim()).filter(Boolean);
 }
 
 // ---------------------------------------------------------------------------
@@ -269,6 +277,23 @@ function detectMemberNotInGroup(ctx) {
       }
     }
   }
+
+  // Also check split_with names
+  if (row.splitWithParsed && row.splitWithParsed.length > 0) {
+    for (const name of row.splitWithParsed) {
+      const normalizedSplitName = normalizeName(name);
+      if (normalizedSplitName && !memberNameMap.has(normalizedSplitName)) {
+        anomalies.push({
+          rowIndex,
+          issueType: 'MEMBER_NOT_IN_GROUP',
+          description: `Split member "${name}" is not a member of this group`,
+          rawRow: row.raw,
+          suggestedAction: `Add "${name}" as a new member of the group, or correct the name.`,
+          status: 'pending',
+        });
+      }
+    }
+  }
 }
 
 /**
@@ -319,6 +344,27 @@ function detectExpenseAfterLeave(ctx) {
       }
     }
   }
+
+  // Check split_with members
+  if (row.processed.normalizedSplitWith && row.processed.normalizedSplitWith.length > 0) {
+    for (const name of row.processed.normalizedSplitWith) {
+      const splitName = normalizeName(name);
+      const splitInfo = memberNameMap.get(splitName);
+      if (splitInfo && splitInfo.leaveDate) {
+        const leaveDate = new Date(splitInfo.leaveDate);
+        if (expenseDate > leaveDate) {
+          anomalies.push({
+            rowIndex,
+            issueType: 'EXPENSE_AFTER_LEAVE',
+            description: `Split member "${name}" left the group on ${leaveDate.toISOString().split('T')[0]}, but this expense is dated ${expenseDate.toISOString().split('T')[0]}`,
+            rawRow: row.raw,
+            suggestedAction: `Exclude "${name}" from the split for this expense.`,
+            status: 'pending',
+          });
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -363,6 +409,27 @@ function detectExpenseBeforeJoin(ctx) {
             description: `Split member "${split.name}" joined on ${joinDate.toISOString().split('T')[0]}, but expense is dated ${expenseDate.toISOString().split('T')[0]}`,
             rawRow: row.raw,
             suggestedAction: `Auto-exclude "${split.name}" from the split. They had not joined yet.`,
+            status: 'pending',
+          });
+        }
+      }
+    }
+  }
+
+  // Check split_with members
+  if (row.processed.normalizedSplitWith && row.processed.normalizedSplitWith.length > 0) {
+    for (const name of row.processed.normalizedSplitWith) {
+      const splitName = normalizeName(name);
+      const splitInfo = memberNameMap.get(splitName);
+      if (splitInfo && splitInfo.joinDate) {
+        const joinDate = new Date(splitInfo.joinDate);
+        if (expenseDate < joinDate) {
+          anomalies.push({
+            rowIndex,
+            issueType: 'EXPENSE_BEFORE_JOIN',
+            description: `Split member "${name}" joined on ${joinDate.toISOString().split('T')[0]}, but expense is dated ${expenseDate.toISOString().split('T')[0]}`,
+            rawRow: row.raw,
+            suggestedAction: `Auto-exclude "${name}" from the split. They had not joined yet.`,
             status: 'pending',
           });
         }
@@ -550,6 +617,31 @@ function detectNameVariant(ctx) {
       }
     }
   }
+
+  // Check split_with names
+  if (row.splitWithParsed && row.splitWithParsed.length > 0) {
+    row.processed.normalizedSplitWith = [];
+    for (const name of row.splitWithParsed) {
+      const match = findCanonicalName(name, canonicalNames);
+      if (match && match.wasVariant) {
+        anomalies.push({
+          rowIndex,
+          issueType: 'NAME_VARIANT',
+          description: `Split member name "${name}" is a variant of "${match.canonical}" — auto-normalizing`,
+          rawRow: row.raw,
+          suggestedAction: `Normalize "${name}" → "${match.canonical}"`,
+          status: 'pending',
+        });
+        row.processed.normalizedSplitWith.push(match.canonical);
+      } else if (match) {
+        row.processed.normalizedSplitWith.push(match.canonical);
+      } else {
+        row.processed.normalizedSplitWith.push(name);
+      }
+    }
+  } else {
+    row.processed.normalizedSplitWith = [];
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -610,6 +702,9 @@ async function parseAndAnalyzeCSV(csvString, groupId) {
         'splittype': 'SplitType',
         'split type': 'SplitType',
         'split_type': 'SplitType',
+        'splitwith': 'SplitWith',
+        'split with': 'SplitWith',
+        'split_with': 'SplitWith',
         'splitdetails': 'SplitDetails',
         'split details': 'SplitDetails',
         'split_details': 'SplitDetails',
@@ -637,6 +732,7 @@ async function parseAndAnalyzeCSV(csvString, groupId) {
     // Build enriched row object
     const parsedAmount = parseAmount(csvRow.Amount);
     const splitDetailsParsed = parseSplitDetails(csvRow.SplitDetails);
+    const splitWithParsed = parseSplitWith(csvRow.SplitWith);
 
     const row = {
       // Original CSV values
@@ -647,11 +743,13 @@ async function parseAndAnalyzeCSV(csvString, groupId) {
       paidBy: csvRow.PaidBy,
       splitType: csvRow.SplitType,
       splitDetails: csvRow.SplitDetails,
+      splitWith: csvRow.SplitWith,
       notes: csvRow.Notes,
 
       // Parsed helpers
       parsedAmount,
       splitDetailsParsed,
+      splitWithParsed,
 
       // Raw CSV row for logging
       raw: { ...csvRow },
@@ -798,9 +896,23 @@ function buildProcessedRow(row, memberNameMap) {
   const payerUserId = payerInfo ? payerInfo.userId : null;
 
   // Resolve split type
-  const splitType = (row.splitType || 'EQUAL').trim().toUpperCase();
+  let splitType = (row.splitType || 'EQUAL').trim().toUpperCase();
+  if (splitType === 'UNEQUAL') splitType = 'EXACT';
+  if (splitType === 'SHARE') splitType = 'SHARES';
   const validSplitTypes = ['EQUAL', 'EXACT', 'PERCENTAGE', 'SHARES'];
   const finalSplitType = validSplitTypes.includes(splitType) ? splitType : 'EQUAL';
+
+  // Resolve split_with names with user IDs
+  const resolvedSplitWith = [];
+  if (row.processed.normalizedSplitWith && row.processed.normalizedSplitWith.length > 0) {
+    for (const name of row.processed.normalizedSplitWith) {
+      const info = memberNameMap.get(normalizeName(name));
+      resolvedSplitWith.push({
+        userId: info ? info.userId : null,
+        name: name,
+      });
+    }
+  }
 
   // Resolve split details with user IDs
   const resolvedSplits = [];
@@ -829,6 +941,7 @@ function buildProcessedRow(row, memberNameMap) {
     paidBy: payerUserId,
     paidByName: payerName,
     splitType: finalSplitType,
+    splitWith: resolvedSplitWith,
     splitDetails: resolvedSplits,
     isSettlement: row.processed.isSettlement,
     notes: (row.notes || '').trim(),
