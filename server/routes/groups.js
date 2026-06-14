@@ -19,13 +19,18 @@ router.get('/', auth, async (req, res, next) => {
       .populate('createdBy', 'name email')
       .sort({ createdAt: -1 });
 
-    // Attach member count to each group
+    // Attach member count and expense count to each group
+    const Expense = require('../models/Expense');
     const groupsWithCounts = await Promise.all(
       groups.map(async (group) => {
         const memberCount = await GroupMember.countDocuments({
           groupId: group._id,
         });
-        return { ...group.toObject(), memberCount };
+        const expenseCount = await Expense.countDocuments({
+          groupId: group._id,
+          isDeleted: false,
+        });
+        return { ...group.toObject(), memberCount, expenseCount };
       })
     );
 

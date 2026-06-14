@@ -1,20 +1,15 @@
-import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { GroupProvider } from '../context/GroupContext';
 import {
   LayoutDashboard,
   LogOut,
-  Menu,
-  X,
-  Wallet,
-  ChevronRight,
+  Zap,
 } from 'lucide-react';
 
 export default function AppLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -27,112 +22,114 @@ export default function AppLayout() {
 
   return (
     <GroupProvider>
-      <div className="min-h-screen flex bg-gray-950">
-        {/* Mobile overlay */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        {/* Sidebar */}
-        <aside
-          className={`fixed lg:static inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 ease-out
-            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0
-            bg-gray-900/80 backdrop-blur-xl border-r border-gray-800/50 flex flex-col`}
-        >
+      <div className="min-h-screen flex flex-col lg:flex-row bg-[#0a0f1e]">
+        {/* Sidebar for Desktop */}
+        <aside className="hidden lg:flex w-[260px] bg-[#0d1424] border-r border-[#00d4ff]/15 flex-col fixed inset-y-0 left-0">
           {/* Logo */}
-          <div className="h-16 flex items-center gap-3 px-6 border-b border-gray-800/50">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-violet-500 flex items-center justify-center shadow-lg shadow-brand-500/30">
-              <Wallet className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold bg-gradient-to-r from-brand-300 to-violet-300 bg-clip-text text-transparent">
-                SplitLedger
-              </h1>
-            </div>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="ml-auto lg:hidden text-gray-400 hover:text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
+          <div className="h-20 flex items-center gap-3 px-6 border-b border-[#00d4ff]/15">
+            <Zap className="w-6 h-6 text-[#00d4ff] fill-[#00d4ff]" />
+            <span className="text-xl font-bold tracking-wider text-white">
+              Split<span className="text-[#00d4ff]">Ledger</span>
+            </span>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+          <nav className="flex-1 px-4 py-6 space-y-2">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 end
-                onClick={() => setSidebarOpen(false)}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group
+                  `flex items-center gap-3 px-4 py-3 text-sm font-semibold tracking-wide transition-all duration-200 rounded-lg group
                   ${
                     isActive
-                      ? 'bg-brand-500/15 text-brand-300 border border-brand-500/20'
-                      : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/60'
+                      ? 'text-[#00d4ff] border-l-4 border-[#00d4ff] bg-[#00d4ff]/5 pl-3'
+                      : 'text-slate-400 hover:text-[#00d4ff] hover:bg-[#00d4ff]/5 border-l-4 border-transparent hover:border-[#00d4ff]/30 pl-3'
                   }`
                 }
               >
                 <item.icon className="w-5 h-5 flex-shrink-0" />
                 <span>{item.label}</span>
-                <ChevronRight className="w-4 h-4 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
               </NavLink>
             ))}
           </nav>
 
           {/* User section */}
-          <div className="p-4 border-t border-gray-800/50">
+          <div className="p-4 border-t border-[#00d4ff]/15 bg-[#0a0f1e]/40">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm">
+              {/* User Avatar with gradient background (purple to cyan) */}
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#00d4ff] flex items-center justify-center text-white font-bold text-base shadow-md">
                 {user?.name?.charAt(0)?.toUpperCase() || 'U'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-200 truncate">
+                <p className="text-sm font-bold text-white truncate">
                   {user?.name || 'User'}
                 </p>
-                <p className="text-xs text-gray-500 truncate">
+                <p className="text-xs text-slate-400 truncate">
                   {user?.email || ''}
                 </p>
               </div>
               <button
                 onClick={handleLogout}
-                className="p-2 text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all duration-200"
+                className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all duration-200"
                 title="Logout"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-5 h-5" />
               </button>
             </div>
           </div>
         </aside>
 
-        {/* Main content */}
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Top bar (mobile) */}
-          <header className="h-16 flex items-center gap-4 px-4 lg:px-8 border-b border-gray-800/50 bg-gray-950/80 backdrop-blur-xl sticky top-0 z-30">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <div className="flex-1" />
-            <div className="flex items-center gap-2 lg:hidden">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white font-bold text-xs">
-                {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-              </div>
-            </div>
-          </header>
+        {/* Mobile Top Header */}
+        <header className="lg:hidden h-16 flex items-center justify-between px-6 bg-[#0d1424] border-b border-[#00d4ff]/15 sticky top-0 z-30">
+          <div className="flex items-center gap-2">
+            <Zap className="w-5 h-5 text-[#00d4ff] fill-[#00d4ff]" />
+            <span className="text-lg font-bold text-white tracking-wider">
+              Split<span className="text-[#00d4ff]">Ledger</span>
+            </span>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="p-1.5 text-slate-400 hover:text-rose-400 transition-colors"
+            title="Logout"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </header>
 
-          {/* Page content */}
+        {/* Page Content area */}
+        <div className="flex-1 flex flex-col min-w-0 lg:pl-[260px] pb-20 lg:pb-0">
           <main className="flex-1 overflow-y-auto">
             <div className="max-w-7xl mx-auto px-4 lg:px-8 py-6 lg:py-8">
               <Outlet />
             </div>
           </main>
+        </div>
+
+        {/* Bottom Nav Bar for Mobile */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#0d1424] border-t border-[#00d4ff]/15 flex items-center justify-around z-30 px-4 shadow-lg">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end
+              className={({ isActive }) =>
+                `flex flex-col items-center gap-1 text-xs font-semibold py-1 transition-all duration-200
+                ${isActive ? 'text-[#00d4ff]' : 'text-slate-400 hover:text-[#00d4ff]'}`
+              }
+            >
+              <item.icon className="w-5 h-5" />
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+          
+          <div className="flex flex-col items-center gap-1 text-xs font-semibold py-1 text-slate-400">
+            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#00d4ff] flex items-center justify-center text-white font-bold text-[10px] shadow-sm">
+              {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+            </div>
+            <span>{user?.name?.split(' ')[0] || 'Profile'}</span>
+          </div>
         </div>
       </div>
     </GroupProvider>
