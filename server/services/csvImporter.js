@@ -246,7 +246,7 @@ function detectDollarAsRupee(ctx) {
  */
 function detectMemberNotInGroup(ctx) {
   const { row, rowIndex, anomalies, memberNameMap } = ctx;
-  const payerName = row.paidBy || '';
+  const payerName = row.processed.normalizedPayer || row.paidBy || '';
   const normalizedPayer = normalizeName(payerName);
 
   if (normalizedPayer && !memberNameMap.has(normalizedPayer)) {
@@ -264,14 +264,15 @@ function detectMemberNotInGroup(ctx) {
   // Also check split detail names
   if (row.splitDetailsParsed && row.splitDetailsParsed.length > 0) {
     for (const split of row.splitDetailsParsed) {
-      const normalizedSplitName = normalizeName(split.name);
+      const name = split.normalizedName || split.name;
+      const normalizedSplitName = normalizeName(name);
       if (normalizedSplitName && !memberNameMap.has(normalizedSplitName)) {
         anomalies.push({
           rowIndex,
           issueType: 'MEMBER_NOT_IN_GROUP',
-          description: `Split member "${split.name}" is not a member of this group`,
+          description: `Split member "${name}" is not a member of this group`,
           rawRow: row.raw,
-          suggestedAction: `Add "${split.name}" as a new member of the group, or correct the name.`,
+          suggestedAction: `Add "${name}" as a new member of the group, or correct the name.`,
           status: 'pending',
         });
       }
@@ -279,8 +280,8 @@ function detectMemberNotInGroup(ctx) {
   }
 
   // Also check split_with names
-  if (row.splitWithParsed && row.splitWithParsed.length > 0) {
-    for (const name of row.splitWithParsed) {
+  if (row.processed.normalizedSplitWith && row.processed.normalizedSplitWith.length > 0) {
+    for (const name of row.processed.normalizedSplitWith) {
       const normalizedSplitName = normalizeName(name);
       if (normalizedSplitName && !memberNameMap.has(normalizedSplitName)) {
         anomalies.push({

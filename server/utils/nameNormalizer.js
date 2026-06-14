@@ -25,10 +25,23 @@ function findCanonicalName(rawName, canonicalNames) {
 
   const normalised = normalizeName(rawName);
 
+  // 1. Exact match (case insensitive)
   for (const canonical of canonicalNames) {
     if (normalizeName(canonical) === normalised) {
       const wasVariant = canonical !== rawName.trim();
       return { canonical, wasVariant };
+    }
+  }
+
+  // 2. Fuzzy match: check if raw name starts with canonical name followed by space/initials
+  for (const canonical of canonicalNames) {
+    const normCanonical = normalizeName(canonical);
+    if (normalised.startsWith(normCanonical + ' ') || normalised.startsWith(normCanonical + '.')) {
+      return { canonical, wasVariant: true };
+    }
+    // Check if canonical name starts with raw name (at least 3 characters)
+    if (normCanonical.startsWith(normalised) && normalised.length >= 3) {
+      return { canonical, wasVariant: true };
     }
   }
 
