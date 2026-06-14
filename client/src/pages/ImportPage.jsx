@@ -78,13 +78,13 @@ export default function ImportPage() {
       <div className="flex items-center gap-4 mb-6">
         <Link
           to={`/groups/${groupId}`}
-          className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+          className="p-2 text-nebula-muted hover:text-white hover:bg-nebula-card rounded-lg transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
           <h1 className="text-2xl font-bold text-white">Import CSV</h1>
-          <p className="text-gray-500 text-sm mt-0.5">
+          <p className="text-nebula-muted text-sm mt-0.5">
             Upload a CSV file, review anomalies, then confirm the import
           </p>
         </div>
@@ -102,23 +102,23 @@ export default function ImportPage() {
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300
                   ${
                     isDone
-                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      ? 'bg-nebula-positive/20 text-nebula-positive border border-nebula-positive/30'
                       : isActive
-                      ? 'bg-brand-500/20 text-brand-300 border border-brand-500/30'
-                      : 'bg-gray-800 text-gray-600 border border-gray-700'
+                      ? 'bg-nebula-primary/20 text-nebula-primary border border-nebula-primary/30'
+                      : 'bg-nebula-card text-nebula-subtle border border-nebula-border'
                   }`}
               >
                 {idx + 1}
               </div>
               <span
                 className={`text-sm font-medium hidden sm:block ${
-                  isActive ? 'text-brand-300' : isDone ? 'text-emerald-400' : 'text-gray-600'
+                  isActive ? 'text-nebula-primary' : isDone ? 'text-nebula-positive' : 'text-nebula-subtle'
                 }`}
               >
                 {label}
               </span>
               {idx < 2 && (
-                <div className={`flex-1 h-px ${isDone ? 'bg-emerald-500/30' : 'bg-gray-800'}`} />
+                <div className={`flex-1 h-px ${isDone ? 'bg-nebula-positive/30' : 'bg-nebula-border'}`} />
               )}
             </div>
           );
@@ -137,7 +137,7 @@ export default function ImportPage() {
             <button
               onClick={handleUpload}
               disabled={!file || uploading}
-              className="btn-primary"
+              className="nebula-button-gradient flex items-center gap-1.5"
             >
               {uploading ? (
                 <>
@@ -159,22 +159,22 @@ export default function ImportPage() {
       {step === 'review' && importData && (
         <div className="space-y-4">
           {/* Quick summary */}
-          <div className="glass-card p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+          <div className="nebula-card p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
             <div>
-              <p className="text-xl font-bold text-white">{importData.summary.totalRows}</p>
-              <p className="text-xs text-gray-500">Total Rows</p>
+              <p className="text-xl font-bold text-white amount-mono">{importData.summary.totalRows}</p>
+              <p className="text-xs text-nebula-muted">Total Rows</p>
             </div>
             <div>
-              <p className="text-xl font-bold text-emerald-400">{importData.summary.successCount}</p>
-              <p className="text-xs text-gray-500">Valid</p>
+              <p className="text-xl font-bold text-nebula-positive amount-mono">{importData.summary.successCount}</p>
+              <p className="text-xs text-nebula-muted">Valid</p>
             </div>
             <div>
-              <p className="text-xl font-bold text-rose-400">{importData.summary.errorCount}</p>
-              <p className="text-xs text-gray-500">Errors</p>
+              <p className="text-xl font-bold text-nebula-negative amount-mono">{importData.summary.errorCount}</p>
+              <p className="text-xs text-nebula-muted">Errors</p>
             </div>
             <div>
-              <p className="text-xl font-bold text-amber-400">{importData.summary.anomalyCount}</p>
-              <p className="text-xs text-gray-500">Anomalies</p>
+              <p className="text-xl font-bold text-nebula-primary amount-mono">{importData.summary.anomalyCount}</p>
+              <p className="text-xs text-nebula-muted">Anomalies</p>
             </div>
           </div>
 
@@ -193,10 +193,10 @@ export default function ImportPage() {
         <div className="space-y-4">
           <ImportReport summary={importResult} />
           <div className="flex justify-center gap-3">
-            <button onClick={resetImport} className="btn-secondary">
+            <button onClick={resetImport} className="nebula-button-ghost">
               Import Another CSV
             </button>
-            <Link to={`/groups/${groupId}`} className="btn-primary">
+            <Link to={`/groups/${groupId}`} className="nebula-button-gradient">
               Back to Group
             </Link>
           </div>

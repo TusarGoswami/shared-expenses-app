@@ -5,7 +5,6 @@ import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
 import {
   Plus,
-  ArrowRight,
   FolderOpen,
   X,
   Wallet,
@@ -55,12 +54,12 @@ export default function Dashboard() {
 
   const renderMemberAvatars = (count) => {
     const defaultAvatars = [
-      { initial: 'A', bg: 'from-pink-500 to-rose-500' },
-      { initial: 'R', bg: 'from-blue-500 to-indigo-500' },
+      { initial: 'A', bg: 'from-purple-500 to-indigo-500' },
+      { initial: 'R', bg: 'from-pink-500 to-rose-500' },
       { initial: 'P', bg: 'from-amber-500 to-orange-500' },
       { initial: 'M', bg: 'from-emerald-500 to-teal-500' },
       { initial: 'S', bg: 'from-violet-500 to-purple-500' },
-      { initial: 'D', bg: 'from-cyan-500 to-blue-500' },
+      { initial: 'D', bg: 'from-blue-500 to-cyan-500' },
     ];
     
     return (
@@ -68,13 +67,13 @@ export default function Dashboard() {
         {defaultAvatars.slice(0, Math.min(count, 5)).map((av, i) => (
           <div
             key={i}
-            className={`w-7 h-7 rounded-full bg-gradient-to-br ${av.bg} border-2 border-[#111827] flex items-center justify-center text-[10px] font-bold text-white shadow-sm`}
+            className={`w-7 h-7 rounded-full bg-gradient-to-br ${av.bg} border-2 border-nebula-card flex items-center justify-center text-[10px] font-bold text-white shadow-sm`}
           >
             {av.initial}
           </div>
         ))}
         {count > 5 && (
-          <div className="w-7 h-7 rounded-full bg-slate-800 border-2 border-[#111827] flex items-center justify-center text-[10px] font-bold text-[#00d4ff] shadow-sm">
+          <div className="w-7 h-7 rounded-full bg-nebula-border border-2 border-nebula-card flex items-center justify-center text-[10px] font-bold text-nebula-primary shadow-sm">
             +{count - 5}
           </div>
         )}
@@ -85,7 +84,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="w-10 h-10 border-4 border-[#00d4ff]/30 border-t-[#00d4ff] rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-nebula-primary/30 border-t-nebula-primary rounded-full animate-spin" />
       </div>
     );
   }
@@ -98,11 +97,11 @@ export default function Dashboard() {
           <h1 className="text-3xl font-extrabold text-white tracking-wide">
             Hey, {user?.name?.split(' ')[0] || 'Aisha'} 👋
           </h1>
-          <p className="text-slate-400 mt-1">
+          <p className="text-nebula-muted mt-1 text-sm">
             Here's what's happening with your groups
           </p>
         </div>
-        <button onClick={() => setShowModal(true)} className="btn-primary">
+        <button onClick={() => setShowModal(true)} className="nebula-button-gradient flex items-center gap-1.5">
           <Plus className="w-4 h-4" />
           New Group
         </button>
@@ -110,15 +109,15 @@ export default function Dashboard() {
 
       {/* Groups grid */}
       {groups.length === 0 ? (
-        <div className="glass-card p-12 text-center max-w-xl mx-auto border-t-2 border-t-[#00d4ff]">
-          <FolderOpen className="w-16 h-16 mx-auto text-[#00d4ff] mb-4 opacity-80" />
+        <div className="nebula-card p-12 text-center max-w-xl mx-auto border-t-2 border-t-nebula-primary shadow-nebula-sm">
+          <FolderOpen className="w-16 h-16 mx-auto text-nebula-primary mb-4 opacity-80" />
           <h3 className="text-xl font-bold text-white mb-2">
             No groups yet
           </h3>
-          <p className="text-slate-400 mb-6 leading-relaxed">
+          <p className="text-nebula-muted mb-6 leading-relaxed text-sm">
             Create your first expense group to start tracking and splitting expenses with your flatmates.
           </p>
-          <button onClick={() => setShowModal(true)} className="btn-primary">
+          <button onClick={() => setShowModal(true)} className="nebula-button-gradient flex items-center gap-1.5 mx-auto">
             <Plus className="w-4 h-4" />
             Create Your First Group
           </button>
@@ -129,42 +128,42 @@ export default function Dashboard() {
             <Link
               key={group._id}
               to={`/groups/${group._id}`}
-              className="glass-card-hover p-6 group block relative overflow-hidden animate-fade-in-up"
+              className="nebula-card p-6 group block relative overflow-hidden animate-fade-in-up hover:-translate-y-1 hover:shadow-nebula-md transition-all duration-300"
               style={{ animationDelay: `${idx * 80}ms` }}
             >
-              {/* Purple-to-Cyan top border */}
-              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#7c3aed] to-[#00d4ff]" />
+              {/* Gradient top border */}
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-nebula-gradient" />
 
               <div className="flex items-start justify-between mb-5">
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#7c3aed]/20 to-[#00d4ff]/20 border border-[#00d4ff]/20 flex items-center justify-center shadow-inner">
-                  <Wallet className="w-5 h-5 text-[#00d4ff]" />
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-nebula-accent/20 to-nebula-primary/20 border border-nebula-primary/20 flex items-center justify-center shadow-inner">
+                  <Wallet className="w-5 h-5 text-nebula-primary" />
                 </div>
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 bg-slate-800/40 px-2.5 py-1 rounded-full border border-slate-700/30">
-                  <Receipt className="w-3.5 h-3.5 text-[#00d4ff]" />
-                  <span className="monospace-amount">{group.expenseCount || 0}</span> expenses
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-nebula-muted bg-nebula-bg px-2.5 py-1 rounded-full border border-nebula-border">
+                  <Receipt className="w-3.5 h-3.5 text-nebula-primary" />
+                  <span className="font-mono tabular-nums">{group.expenseCount || 0}</span> expenses
                 </div>
               </div>
 
-              <h3 className="text-xl font-extrabold text-white mb-2 group-hover:text-[#00d4ff] transition-colors leading-tight">
+              <h3 className="text-xl font-extrabold text-white mb-2 group-hover:text-nebula-primary transition-colors leading-tight">
                 {group.name}
               </h3>
 
               {group.description && (
-                <p className="text-sm text-slate-400 mb-6 line-clamp-2 leading-relaxed">
+                <p className="text-sm text-nebula-muted mb-6 line-clamp-2 leading-relaxed">
                   {group.description}
                 </p>
               )}
 
-              <div className="flex items-center justify-between border-t border-slate-800/60 pt-4 mt-auto">
+              <div className="flex items-center justify-between border-t border-nebula-border pt-4 mt-auto">
                 <div className="flex items-center gap-2">
                   {renderMemberAvatars(group.memberCount || 0)}
-                  <span className="text-xs font-semibold text-slate-400 flex items-center gap-1">
-                    <Users className="w-3 h-3 text-[#7c3aed]" />
+                  <span className="text-xs font-semibold text-nebula-muted flex items-center gap-1">
+                    <Users className="w-3 h-3 text-nebula-accent" />
                     {group.memberCount || 0} members
                   </span>
                 </div>
                 
-                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                <span className="text-[10px] font-semibold text-nebula-subtle uppercase tracking-wider">
                   {new Date(group.createdAt).toLocaleDateString('en-IN', {
                     month: 'short',
                     day: 'numeric',
@@ -181,15 +180,15 @@ export default function Dashboard() {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => setShowModal(false)}
           />
-          <div className="relative glass-card p-8 w-full max-w-md border-t-2 border-t-[#00d4ff] animate-scale-in">
+          <div className="relative nebula-card p-8 w-full max-w-md border-t-2 border-t-nebula-primary animate-scale-in">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white tracking-wide">Create Group</h2>
               <button
                 onClick={() => setShowModal(false)}
-                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                className="p-1.5 text-nebula-muted hover:text-white hover:bg-nebula-border rounded-lg transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -209,7 +208,7 @@ export default function Dashboard() {
                   }
                   placeholder="e.g., Flat Expenses 2024"
                   required
-                  className="input-field"
+                  className="nebula-input"
                   autoFocus
                 />
               </div>
@@ -225,21 +224,21 @@ export default function Dashboard() {
                   }
                   placeholder="Brief description of this expense group..."
                   rows={3}
-                  className="input-field resize-none"
+                  className="nebula-input resize-none"
                 />
               </div>
               <div className="flex gap-4 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="btn-secondary flex-1"
+                  className="nebula-button-ghost flex-1"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={creating}
-                  className="btn-primary flex-1"
+                  className="nebula-button-primary flex-1"
                 >
                   {creating ? (
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

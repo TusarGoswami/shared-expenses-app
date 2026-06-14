@@ -47,7 +47,7 @@ export default function BalancePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="w-10 h-10 border-4 border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-nebula-primary/30 border-t-nebula-primary rounded-full animate-spin" />
       </div>
     );
   }
@@ -59,13 +59,13 @@ export default function BalancePage() {
         <div className="flex items-center gap-4">
           <Link
             to={`/groups/${groupId}`}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-2 text-nebula-muted hover:text-white hover:bg-nebula-card rounded-lg transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-white">Balances & Settlements</h1>
-            <p className="text-gray-500 text-sm mt-0.5">
+            <p className="text-nebula-muted text-sm mt-0.5">
               Click any member to see their expense breakdown
             </p>
           </div>
@@ -73,7 +73,7 @@ export default function BalancePage() {
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="btn-secondary text-sm"
+          className="nebula-button-ghost text-sm flex items-center gap-1.5"
         >
           <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           Refresh

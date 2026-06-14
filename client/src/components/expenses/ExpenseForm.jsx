@@ -117,12 +117,12 @@ export default function ExpenseForm({ groupId, members, onClose, onCreated }) {
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center p-4 pt-10 sm:pt-16">
       <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative glass-card p-6 w-full max-w-lg animate-scale-in my-8">
+      <div className="relative nebula-card p-6 w-full max-w-lg animate-scale-in my-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-white">
             {form.isSettlement ? 'Record Settlement' : 'Add Expense'}
           </h2>
-          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-1.5 text-nebula-muted hover:text-white hover:bg-nebula-border rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -134,9 +134,9 @@ export default function ExpenseForm({ groupId, members, onClose, onCreated }) {
               type="checkbox"
               checked={form.isSettlement}
               onChange={(e) => setForm({ ...form, isSettlement: e.target.checked })}
-              className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-brand-500 focus:ring-brand-500/20"
+              className="w-4 h-4 rounded border-nebula-border bg-nebula-bg text-nebula-primary focus:ring-nebula-primary/20"
             />
-            <span className="text-sm text-gray-300">This is a settlement payment</span>
+            <span className="text-sm text-nebula-muted">This is a settlement payment</span>
           </label>
 
           {/* Description */}
@@ -148,7 +148,7 @@ export default function ExpenseForm({ groupId, members, onClose, onCreated }) {
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder="e.g., Groceries, Rent, Netflix"
               required
-              className="input-field"
+              className="nebula-input"
             />
           </div>
 
@@ -158,9 +158,9 @@ export default function ExpenseForm({ groupId, members, onClose, onCreated }) {
               <label className="label-text">Amount</label>
               <div className="relative">
                 {form.currency === 'INR' ? (
-                  <IndianRupee className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <IndianRupee className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-nebula-subtle" />
                 ) : (
-                  <DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-nebula-subtle" />
                 )}
                 <input
                   type="number"
@@ -169,11 +169,11 @@ export default function ExpenseForm({ groupId, members, onClose, onCreated }) {
                   onChange={(e) => setForm({ ...form, amount: e.target.value })}
                   placeholder="0.00"
                   required
-                  className="input-field pl-10"
+                  className="nebula-input pl-10"
                 />
               </div>
               {convertedAmount && (
-                <p className="text-xs text-brand-400 mt-1.5 flex items-center gap-1">
+                <p className="text-xs text-nebula-primary mt-1.5 flex items-center gap-1 font-semibold">
                   <IndianRupee className="w-3 h-3" />
                   ≈ ₹{convertedAmount} INR (rate: {USD_TO_INR})
                 </p>
@@ -184,7 +184,7 @@ export default function ExpenseForm({ groupId, members, onClose, onCreated }) {
               <select
                 value={form.currency}
                 onChange={(e) => setForm({ ...form, currency: e.target.value })}
-                className="input-field"
+                className="nebula-input"
               >
                 <option value="INR">INR</option>
                 <option value="USD">USD</option>
@@ -202,7 +202,7 @@ export default function ExpenseForm({ groupId, members, onClose, onCreated }) {
               value={form.date}
               onChange={(e) => setForm({ ...form, date: e.target.value })}
               required
-              className="input-field"
+              className="nebula-input"
             />
           </div>
 
@@ -210,7 +210,7 @@ export default function ExpenseForm({ groupId, members, onClose, onCreated }) {
           <div>
             <label className="label-text flex items-center gap-1.5">
               <Users className="w-3.5 h-3.5" /> Paid By
-              <span className="text-xs text-gray-600 ml-1">
+              <span className="text-xs text-nebula-subtle ml-1 font-normal">
                 ({activeMembers.length} active on this date)
               </span>
             </label>
@@ -218,7 +218,7 @@ export default function ExpenseForm({ groupId, members, onClose, onCreated }) {
               value={form.paidBy}
               onChange={(e) => setForm({ ...form, paidBy: e.target.value })}
               required
-              className="input-field"
+              className="nebula-input"
             >
               <option value="">Select payer...</option>
               {activeMembers.map((m) => (
@@ -242,8 +242,8 @@ export default function ExpenseForm({ groupId, members, onClose, onCreated }) {
                     className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 border
                       ${
                         form.splitType === type
-                          ? 'bg-brand-500/20 border-brand-500/40 text-brand-300'
-                          : 'bg-gray-800/50 border-gray-700 text-gray-400 hover:border-gray-600'
+                          ? 'bg-nebula-primary/20 border-nebula-primary/40 text-nebula-primary shadow-nebula-sm'
+                          : 'bg-nebula-bg border-nebula-border text-nebula-muted hover:border-nebula-primary/50'
                       }`}
                   >
                     {type}
@@ -264,7 +264,7 @@ export default function ExpenseForm({ groupId, members, onClose, onCreated }) {
               <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                 {splitDetails.map((s, idx) => (
                   <div key={s.userId} className="flex items-center gap-3">
-                    <span className="text-sm text-gray-300 w-24 truncate">{s.name}</span>
+                    <span className="text-sm text-nebula-text w-24 truncate">{s.name}</span>
                     <input
                       type="number"
                       step="0.01"
@@ -287,9 +287,9 @@ export default function ExpenseForm({ groupId, members, onClose, onCreated }) {
                         )
                       }
                       placeholder="0"
-                      className="input-field flex-1"
+                      className="nebula-input flex-1"
                     />
-                    <span className="text-xs text-gray-500 w-8">
+                    <span className="text-xs text-nebula-muted w-8 text-right">
                       {form.splitType === 'PERCENTAGE' ? '%' : form.splitType === 'SHARES' ? '×' : '₹'}
                     </span>
                   </div>
@@ -306,21 +306,21 @@ export default function ExpenseForm({ groupId, members, onClose, onCreated }) {
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               placeholder="Any additional notes..."
-              className="input-field"
+              className="nebula-input"
             />
           </div>
 
           {/* Submit */}
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="btn-secondary flex-1">
+            <button type="button" onClick={onClose} className="nebula-button-ghost flex-1">
               Cancel
             </button>
-            <button type="submit" disabled={saving} className="btn-primary flex-1">
+            <button type="submit" disabled={saving} className="nebula-button-gradient flex-1">
               {saving ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
               ) : (
                 <>
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-4 h-4 inline-block mr-1" />
                   {form.isSettlement ? 'Record' : 'Add'}
                 </>
               )}

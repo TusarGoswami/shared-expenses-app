@@ -5,48 +5,36 @@ export default {
   theme: {
     extend: {
       colors: {
-        brand: {
-          50: '#eef2ff',
-          100: '#e0e7ff',
-          200: '#c7d2fe',
-          300: '#a5b4fc',
-          400: '#818cf8',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
-          950: '#1e1b4b',
-        },
+        nebula: {
+          bg: '#12091f',
+          card: '#1a0f2e',
+          border: '#2d1f4a',
+          primary: '#c084fc',
+          'primary-hover': '#a855f7',
+          accent: '#fb7185',
+          positive: '#34d399',
+          negative: '#fb7185',
+          gold: '#fbbf24',
+          text: '#faf5ff',
+          muted: '#a78bca',
+          subtle: '#6b4f8a',
+        }
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['Inter', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
       },
-      animation: {
-        'fade-in': 'fadeIn 0.3s ease-out',
-        'slide-up': 'slideUp 0.3s ease-out',
-        'slide-down': 'slideDown 0.3s ease-out',
-        'scale-in': 'scaleIn 0.2s ease-out',
+      boxShadow: {
+        'nebula-sm': '0 0 12px rgba(192, 132, 252, 0.15)',
+        'nebula-md': '0 0 24px rgba(192, 132, 252, 0.2)',
+        'nebula-lg': '0 0 40px rgba(192, 132, 252, 0.25)',
+        'accent-sm': '0 0 12px rgba(251, 113, 133, 0.2)',
       },
-      keyframes: {
-        fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
-        },
-        slideUp: {
-          '0%': { opacity: '0', transform: 'translateY(10px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
-        },
-        slideDown: {
-          '0%': { opacity: '0', transform: 'translateY(-10px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
-        },
-        scaleIn: {
-          '0%': { opacity: '0', transform: 'scale(0.95)' },
-          '100%': { opacity: '1', transform: 'scale(1)' },
-        },
-      },
-    },
+      backgroundImage: {
+        'nebula-gradient': 'linear-gradient(135deg, #c084fc, #fb7185)',
+        'card-gradient': 'linear-gradient(135deg, #1a0f2e, #12091f)',
+      }
+    }
   },
   plugins: [require('@tailwindcss/forms')],
 };

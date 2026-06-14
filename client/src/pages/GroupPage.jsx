@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useBalance } from '../hooks/useBalance';
 import { getGroup, addMember, updateMember } from '../api/groups';
@@ -23,10 +23,6 @@ import {
   ChevronDown,
   FileSpreadsheet,
   Loader2,
-  AlertTriangle,
-  TrendingUp,
-  TrendingDown,
-  Minus,
 } from 'lucide-react';
 import ExpenseForm from '../components/expenses/ExpenseForm';
 import BalanceSummary from '../components/balances/BalanceSummary';
@@ -251,21 +247,16 @@ export default function GroupPage() {
     return true;
   });
 
-  // Calculate stats for Balances summary card
-  const totalSpentInGroup = expenses.reduce((sum, e) => sum + (e.isDeleted || e.isSettlement ? 0 : e.amountInINR), 0);
-  const myBalanceEntry = balances.find(b => String(b.userId) === String(user?._id || user?.id));
-  const myBalanceVal = myBalanceEntry ? myBalanceEntry.balance : 0;
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="w-10 h-10 border-4 border-[#00d4ff]/30 border-t-[#00d4ff] rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-nebula-primary/30 border-t-nebula-primary rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!group) {
-    return <div className="text-center py-20 text-slate-500">Group not found</div>;
+    return <div className="text-center py-20 text-nebula-muted">Group not found</div>;
   }
 
   return (
@@ -274,12 +265,12 @@ export default function GroupPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-extrabold text-white tracking-wide">{group.name}</h1>
         {group.description && (
-          <p className="text-slate-400 mt-2 text-sm leading-relaxed max-w-2xl">{group.description}</p>
+          <p className="text-nebula-muted mt-2 text-sm leading-relaxed max-w-2xl">{group.description}</p>
         )}
       </div>
 
       {/* Pill-style Tabs */}
-      <div className="flex gap-1 p-1 bg-[#0d1424] rounded-xl border border-[#00d4ff]/15 mb-8 overflow-x-auto scrollbar-none">
+      <div className="flex gap-1 p-1 bg-nebula-bg rounded-xl border border-nebula-border mb-8 overflow-x-auto scrollbar-none">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -287,8 +278,8 @@ export default function GroupPage() {
             className={`flex items-center gap-2 px-5 py-3 rounded-lg text-sm font-semibold transition-all duration-200 whitespace-nowrap
               ${
                 activeTab === tab.id
-                  ? 'bg-[#00d4ff] text-[#0a0f1e] shadow-lg shadow-[#00d4ff]/25'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+                  ? 'bg-nebula-primary text-nebula-bg shadow-lg shadow-nebula-sm'
+                  : 'text-nebula-muted hover:text-white hover:bg-nebula-card/40'
               }`}
           >
             <tab.icon className="w-4 h-4" />
@@ -304,7 +295,7 @@ export default function GroupPage() {
             <h2 className="text-lg font-bold text-white tracking-wide">
               Group Members ({members.length})
             </h2>
-            <button onClick={() => setShowAddMember(true)} className="btn-primary text-sm">
+            <button onClick={() => setShowAddMember(true)} className="nebula-button-gradient flex items-center gap-1.5 text-sm">
               <UserPlus className="w-4 h-4" /> Add Member
             </button>
           </div>
@@ -314,7 +305,7 @@ export default function GroupPage() {
               const memberName = m.userId?.name || 'Unknown';
               const isActive = !m.leaveDate || new Date(m.leaveDate) >= new Date();
               return (
-                <div key={m._id} className="glass-card p-5 flex items-center justify-between gap-4">
+                <div key={m._id} className="nebula-card p-5 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3 min-w-0">
                     {/* Avatar circle based on unique name hash */}
                     <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-base border flex-shrink-0 ${getAvatarColor(memberName)}`}>
@@ -322,8 +313,8 @@ export default function GroupPage() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-white truncate">{memberName}</p>
-                      <p className="text-xs text-slate-400 truncate">{m.userId?.email || '—'}</p>
-                      <p className="text-[10px] text-slate-500 mt-1 font-semibold">
+                      <p className="text-xs text-nebula-muted truncate">{m.userId?.email || '—'}</p>
+                      <p className="text-[10px] text-nebula-subtle mt-1 font-semibold">
                         Joined: {m.joinDate ? format(new Date(m.joinDate), 'MMM d, yyyy') : '—'}
                       </p>
                     </div>
@@ -331,13 +322,13 @@ export default function GroupPage() {
 
                   <div className="flex flex-col items-end gap-2 flex-shrink-0">
                     {isActive ? (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-nebula-positive bg-nebula-positive/10 border border-nebula-positive/20 px-2.5 py-0.5 rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-nebula-positive animate-pulse" />
                         Active
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2.5 py-0.5 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-nebula-negative bg-nebula-negative/10 border border-nebula-negative/20 px-2.5 py-0.5 rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-nebula-negative" />
                         Left on {format(new Date(m.leaveDate), 'MMM d')}
                       </span>
                     )}
@@ -345,7 +336,7 @@ export default function GroupPage() {
                     {isActive && (
                       <button
                         onClick={() => { setShowLeaveModal(m); setLeaveDate(''); }}
-                        className="text-[10px] font-bold text-slate-500 hover:text-rose-400 flex items-center gap-1 transition-colors"
+                        className="text-[10px] font-bold text-nebula-subtle hover:text-nebula-negative flex items-center gap-1 transition-colors"
                       >
                         <UserMinus className="w-3 h-3" /> Set leave date
                       </button>
@@ -358,31 +349,31 @@ export default function GroupPage() {
 
           {/* Add Member Modal */}
           {showAddMember && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowAddMember(false)} />
-              <div className="relative glass-card p-6 w-full max-w-md border-t-2 border-t-[#00d4ff] animate-scale-in">
-                <div className="flex items-center justify-between mb-6">
+            <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center p-4 pt-10 sm:pt-16">
+              <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowAddMember(false)} />
+              <div className="relative nebula-card p-6 w-full max-w-md border-t-2 border-t-nebula-primary animate-scale-in my-8">
+                <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-bold text-white tracking-wide">Add Group Member</h2>
-                  <button onClick={() => setShowAddMember(false)} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
+                  <button onClick={() => setShowAddMember(false)} className="p-1.5 text-nebula-muted hover:text-white hover:bg-nebula-border rounded-lg transition-colors">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
-                <form onSubmit={handleAddMember} className="space-y-4">
+                <form onSubmit={handleAddMember} className="space-y-3">
                   <div>
                     <label className="label-text">Name</label>
-                    <input type="text" value={memberForm.name} onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })} placeholder="e.g. Sam" required className="input-field" />
+                    <input type="text" value={memberForm.name} onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })} placeholder="e.g. Sam" required className="nebula-input" />
                   </div>
                   <div>
                     <label className="label-text">Email</label>
-                    <input type="email" value={memberForm.email} onChange={(e) => setMemberForm({ ...memberForm, email: e.target.value })} placeholder="sam@example.com" required className="input-field" />
+                    <input type="email" value={memberForm.email} onChange={(e) => setMemberForm({ ...memberForm, email: e.target.value })} placeholder="sam@example.com" required className="nebula-input" />
                   </div>
                   <div>
                     <label className="label-text">Join Date</label>
-                    <input type="date" value={memberForm.joinDate} onChange={(e) => setMemberForm({ ...memberForm, joinDate: e.target.value })} className="input-field" />
+                    <input type="date" value={memberForm.joinDate} onChange={(e) => setMemberForm({ ...memberForm, joinDate: e.target.value })} className="nebula-input" />
                   </div>
                   <div className="flex gap-3 pt-2">
-                    <button type="button" onClick={() => setShowAddMember(false)} className="btn-secondary flex-1">Cancel</button>
-                    <button type="submit" className="btn-primary flex-1"><UserPlus className="w-4 h-4" /> Add Member</button>
+                    <button type="button" onClick={() => setShowAddMember(false)} className="nebula-button-ghost flex-1">Cancel</button>
+                    <button type="submit" className="nebula-button-primary flex-1 flex items-center justify-center gap-1.5"><UserPlus className="w-4 h-4" /> Add Member</button>
                   </div>
                 </form>
               </div>
@@ -391,16 +382,16 @@ export default function GroupPage() {
 
           {/* Leave Date Modal */}
           {showLeaveModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowLeaveModal(null)} />
-              <div className="relative glass-card p-6 w-full max-w-sm border-t-2 border-t-rose-500 animate-scale-in">
+            <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center p-4 pt-10 sm:pt-16">
+              <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowLeaveModal(null)} />
+              <div className="relative nebula-card p-6 w-full max-w-sm border-t-2 border-t-nebula-negative animate-scale-in my-8">
                 <h2 className="text-lg font-bold text-white mb-4">
                   Set Leave Date for {showLeaveModal.userId?.name}
                 </h2>
-                <input type="date" value={leaveDate} onChange={(e) => setLeaveDate(e.target.value)} className="input-field mb-4" />
+                <input type="date" value={leaveDate} onChange={(e) => setLeaveDate(e.target.value)} className="nebula-input mb-4" />
                 <div className="flex gap-3">
-                  <button onClick={() => setShowLeaveModal(null)} className="btn-secondary flex-1">Cancel</button>
-                  <button onClick={handleSetLeaveDate} disabled={!leaveDate} className="btn-danger flex-1">
+                  <button onClick={() => setShowLeaveModal(null)} className="nebula-button-ghost flex-1">Cancel</button>
+                  <button onClick={handleSetLeaveDate} disabled={!leaveDate} className="bg-nebula-negative text-white px-4 py-2 rounded-lg hover:brightness-110 active:scale-95 transition-all flex-1 flex items-center justify-center gap-1.5 font-semibold text-sm">
                     <UserMinus className="w-4 h-4" /> Confirm
                   </button>
                 </div>
@@ -420,12 +411,12 @@ export default function GroupPage() {
             <div className="flex gap-2">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className={`btn-secondary text-sm ${showFilters ? 'border-[#00d4ff]/40 text-[#00d4ff]' : ''}`}
+                className={`nebula-button-ghost text-sm flex items-center gap-1 ${showFilters ? 'border-nebula-primary text-nebula-primary' : ''}`}
               >
                 <Filter className="w-4 h-4" /> Filters
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
               </button>
-              <button onClick={() => setShowExpenseForm(true)} className="btn-primary text-sm">
+              <button onClick={() => setShowExpenseForm(true)} className="nebula-button-gradient flex items-center gap-1.5 text-sm">
                 <Plus className="w-4 h-4" /> Add Expense
               </button>
             </div>
@@ -433,10 +424,10 @@ export default function GroupPage() {
 
           {/* Filters panel */}
           {showFilters && (
-            <div className="glass-card p-4 grid grid-cols-1 sm:grid-cols-4 gap-3 animate-fade-in-up">
+            <div className="nebula-card p-4 grid grid-cols-1 sm:grid-cols-4 gap-3 animate-fade-in-up">
               <div>
                 <label className="label-text text-xs">Paid By</label>
-                <select value={filters.paidBy} onChange={(e) => setFilters({ ...filters, paidBy: e.target.value })} className="input-field text-sm">
+                <select value={filters.paidBy} onChange={(e) => setFilters({ ...filters, paidBy: e.target.value })} className="nebula-input text-sm">
                   <option value="">All Members</option>
                   {members.map((m) => (
                     <option key={m.userId._id || m.userId} value={m.userId._id || m.userId}>
@@ -447,7 +438,7 @@ export default function GroupPage() {
               </div>
               <div>
                 <label className="label-text text-xs">Split Type</label>
-                <select value={filters.splitType} onChange={(e) => setFilters({ ...filters, splitType: e.target.value })} className="input-field text-sm">
+                <select value={filters.splitType} onChange={(e) => setFilters({ ...filters, splitType: e.target.value })} className="nebula-input text-sm">
                   <option value="">All Splits</option>
                   <option value="EQUAL">Equal</option>
                   <option value="EXACT">Exact</option>
@@ -457,11 +448,11 @@ export default function GroupPage() {
               </div>
               <div>
                 <label className="label-text text-xs">From Date</label>
-                <input type="date" value={filters.startDate} onChange={(e) => setFilters({ ...filters, startDate: e.target.value })} className="input-field text-sm" />
+                <input type="date" value={filters.startDate} onChange={(e) => setFilters({ ...filters, startDate: e.target.value })} className="nebula-input text-sm" />
               </div>
               <div>
                 <label className="label-text text-xs">To Date</label>
-                <input type="date" value={filters.endDate} onChange={(e) => setFilters({ ...filters, endDate: e.target.value })} className="input-field text-sm" />
+                <input type="date" value={filters.endDate} onChange={(e) => setFilters({ ...filters, endDate: e.target.value })} className="nebula-input text-sm" />
               </div>
             </div>
           )}
@@ -469,15 +460,15 @@ export default function GroupPage() {
           {/* Expenses list */}
           <div className="space-y-4">
             {filteredExpenses.length === 0 ? (
-              <div className="glass-card p-12 text-center text-slate-500">
-                <Receipt className="w-12 h-12 mx-auto mb-3 text-slate-600 opacity-60" />
+              <div className="nebula-card p-12 text-center text-nebula-muted">
+                <Receipt className="w-12 h-12 mx-auto mb-3 text-nebula-subtle opacity-60" />
                 No expenses logged yet
               </div>
             ) : (
               filteredExpenses.map((exp) => (
                 <div
                   key={exp._id}
-                  className="glass-card p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:-translate-y-1 hover:shadow-[0_0_15px_rgba(0,212,255,0.2)] transition-all duration-300 border-t border-t-slate-800"
+                  className="nebula-card p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:-translate-y-1 hover:shadow-nebula-md transition-all duration-300"
                 >
                   <div className="flex items-start gap-4">
                     {/* Payer Avatar */}
@@ -488,17 +479,24 @@ export default function GroupPage() {
                     <div>
                       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                         <h4 className="text-lg font-bold text-white leading-tight">{exp.description}</h4>
-                        {exp.isSettlement && <span className="badge-purple">Settlement</span>}
+                        {exp.isSettlement && (
+                          <span className="nebula-badge bg-nebula-accent/15 text-nebula-accent border border-nebula-accent/30">
+                            Settlement
+                          </span>
+                        )}
                         <span className={
-                          exp.splitType === 'EQUAL' ? 'badge-cyan' :
-                          exp.splitType === 'EXACT' ? 'badge-purple' :
-                          exp.splitType === 'PERCENTAGE' ? 'badge-amber' :
-                          'badge-emerald' // SHARES
+                          exp.splitType === 'EQUAL'
+                            ? 'nebula-badge bg-nebula-primary/15 text-nebula-primary border border-nebula-primary/30'
+                            : exp.splitType === 'EXACT'
+                            ? 'nebula-badge bg-nebula-accent/15 text-nebula-accent border border-nebula-accent/30'
+                            : exp.splitType === 'PERCENTAGE'
+                            ? 'nebula-badge bg-nebula-negative/15 text-nebula-negative border border-nebula-negative/30'
+                            : 'nebula-badge bg-nebula-positive/15 text-nebula-positive border border-nebula-positive/30'
                         }>
                           {exp.splitType}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-nebula-muted">
                         Paid by <span className="text-white font-medium">{exp.paidBy?.name || 'Unknown'}</span>
                         {' · '}
                         {format(new Date(exp.date), 'MMM d, yyyy')}
@@ -508,20 +506,20 @@ export default function GroupPage() {
 
                   <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
                     <div className="text-right">
-                      <span className="text-[#00d4ff] font-bold text-xl mr-1 font-mono">₹</span>
-                      <span className="text-2xl font-extrabold text-white monospace-amount">
+                      <span className="text-nebula-primary font-bold text-xl mr-1 font-mono">₹</span>
+                      <span className="text-2xl font-extrabold text-white amount-mono">
                         {exp.amountInINR?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </span>
                       {exp.currency === 'USD' && (
-                        <p className="text-xs text-slate-400 font-mono">
-                          <span className="text-[#00d4ff]">$</span>{exp.amount?.toFixed(2)}
+                        <p className="text-xs text-nebula-muted font-mono">
+                          <span className="text-nebula-primary">$</span>{exp.amount?.toFixed(2)}
                         </p>
                       )}
                     </div>
 
                     <button
                       onClick={() => handleDeleteExpense(exp._id)}
-                      className="p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
+                      className="p-2 text-nebula-muted hover:text-nebula-negative hover:bg-nebula-negative/10 rounded-lg transition-all"
                       title="Delete"
                     >
                       <Trash2 className="w-5 h-5" />
@@ -555,32 +553,32 @@ export default function GroupPage() {
           />
 
           {breakdown && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={clearBreakdown} />
-              <div className="relative glass-card p-6 w-full max-w-3xl border-t-2 border-t-[#00d4ff] max-h-[85vh] overflow-y-auto animate-scale-in">
+            <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center p-4 pt-10 sm:pt-16">
+              <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={clearBreakdown} />
+              <div className="relative nebula-card p-6 w-full max-w-3xl border-t-2 border-t-nebula-primary animate-scale-in my-8">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-bold text-white tracking-wide">Expense Breakdown</h2>
-                  <button onClick={clearBreakdown} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
+                  <button onClick={clearBreakdown} className="p-1.5 text-nebula-muted hover:text-white hover:bg-nebula-border rounded-lg transition-colors">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
                 
                 <div className="space-y-3">
                   {breakdown.breakdown?.length === 0 ? (
-                    <p className="text-slate-400 text-center py-6">No expenses found for this user.</p>
+                    <p className="text-nebula-muted text-center py-6">No expenses found for this user.</p>
                   ) : (
                     breakdown.breakdown?.map((item) => (
-                      <div key={item.expenseId} className="flex justify-between items-center p-3.5 bg-slate-900/60 rounded-xl border border-slate-800/40">
+                      <div key={item.expenseId} className="flex justify-between items-center p-3.5 bg-nebula-bg rounded-xl border border-nebula-border">
                         <div>
                           <p className="text-sm font-bold text-white">{item.description}</p>
-                          <p className="text-[10px] text-slate-500 font-semibold uppercase mt-0.5">
+                          <p className="text-[10px] text-nebula-subtle font-semibold uppercase mt-0.5 font-mono">
                             {format(new Date(item.date), 'MMM d, yyyy')} · Split: {item.splitType}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-xs text-slate-400">Paid: ₹{item.paidAmount?.toFixed(2)}</p>
-                          <p className="text-xs text-slate-400">Share: ₹{item.owedAmount?.toFixed(2)}</p>
-                          <p className={`text-sm font-bold font-mono mt-0.5 ${item.netEffect >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          <p className="text-xs text-nebula-muted">Paid: ₹{item.paidAmount?.toFixed(2)}</p>
+                          <p className="text-xs text-nebula-muted">Share: ₹{item.owedAmount?.toFixed(2)}</p>
+                          <p className={`text-sm font-bold font-mono mt-0.5 ${item.netEffect >= 0 ? 'text-nebula-positive' : 'text-nebula-negative'}`}>
                             {item.netEffect >= 0 ? '+' : '-'}₹{Math.abs(item.netEffect).toFixed(2)}
                           </p>
                         </div>
@@ -611,23 +609,23 @@ export default function GroupPage() {
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300
                       ${
                         isDone
-                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          ? 'bg-nebula-positive/20 text-nebula-positive border border-nebula-positive/30'
                           : isActive
-                          ? 'bg-[#00d4ff]/20 text-[#00d4ff] border border-[#00d4ff]/30'
-                          : 'bg-slate-800 text-slate-600 border border-slate-700'
+                          ? 'bg-nebula-primary/20 text-nebula-primary border border-nebula-primary/30'
+                          : 'bg-nebula-card text-nebula-subtle border border-nebula-border'
                       }`}
                   >
                     {idx + 1}
                   </div>
                   <span
                     className={`text-sm font-medium hidden sm:block ${
-                      isActive ? 'text-[#00d4ff]' : isDone ? 'text-emerald-400' : 'text-slate-600'
+                      isActive ? 'text-nebula-primary' : isDone ? 'text-nebula-positive' : 'text-nebula-subtle'
                     }`}
                   >
                     {label}
                   </span>
                   {idx < 2 && (
-                    <div className={`flex-1 h-px ${isDone ? 'bg-emerald-500/30' : 'bg-slate-800'}`} />
+                    <div className={`flex-1 h-px ${isDone ? 'bg-nebula-positive/30' : 'bg-nebula-border'}`} />
                   )}
                 </div>
               );
@@ -643,22 +641,22 @@ export default function GroupPage() {
                   ${uploading ? 'opacity-50 cursor-not-allowed' : ''}
                   ${
                     isDragActive
-                      ? 'border-[#00d4ff] bg-[#00d4ff]/10 scale-[1.02]'
+                      ? 'border-nebula-primary bg-nebula-primary/10 scale-[1.02]'
                       : file
-                      ? 'border-emerald-500/40 bg-emerald-500/5'
-                      : 'border-[#00d4ff]/30 hover:border-[#00d4ff] hover:bg-[#00d4ff]/5'
+                      ? 'border-nebula-positive/40 bg-nebula-positive/5'
+                      : 'border-nebula-primary/30 hover:border-nebula-primary hover:bg-nebula-primary/5'
                   }`}
               >
                 <input {...getInputProps()} />
 
                 {file ? (
                   <div className="flex flex-col items-center gap-3">
-                    <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center shadow-lg">
-                      <FileSpreadsheet className="w-7 h-7 text-emerald-400" />
+                    <div className="w-14 h-14 rounded-2xl bg-nebula-positive/15 border border-nebula-positive/20 flex items-center justify-center shadow-lg">
+                      <FileSpreadsheet className="w-7 h-7 text-nebula-positive" />
                     </div>
                     <div>
                       <p className="text-sm font-bold text-white">{file.name}</p>
-                      <p className="text-xs text-slate-400 mt-1">
+                      <p className="text-xs text-nebula-muted mt-1 font-mono">
                         {(file.size / 1024).toFixed(1)} KB
                       </p>
                     </div>
@@ -669,7 +667,7 @@ export default function GroupPage() {
                           e.stopPropagation();
                           setFile(null);
                         }}
-                        className="text-xs text-slate-500 hover:text-rose-400 flex items-center gap-1 transition-colors mt-2"
+                        className="text-xs text-nebula-subtle hover:text-nebula-negative flex items-center gap-1 transition-colors mt-2"
                       >
                         <X className="w-3.5 h-3.5" /> Remove file
                       </button>
@@ -677,20 +675,20 @@ export default function GroupPage() {
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-[#00d4ff]/10 border border-[#00d4ff]/20 flex items-center justify-center shadow-inner">
-                      <Upload className="w-7 h-7 text-[#00d4ff]" />
+                    <div className="w-14 h-14 rounded-2xl bg-nebula-primary/10 border border-nebula-primary/20 flex items-center justify-center shadow-inner">
+                      <Upload className="w-7 h-7 text-nebula-primary" />
                     </div>
                     <div>
-                      <p className="text-sm text-slate-300">
+                      <p className="text-sm text-nebula-muted">
                         {isDragActive ? (
-                          <span className="text-[#00d4ff] font-bold">Drop your CSV here...</span>
+                          <span className="text-nebula-primary font-bold">Drop your CSV here...</span>
                         ) : (
                           <>
-                            <span className="text-[#00d4ff] font-bold">Click to browse</span> or drag and drop
+                            <span className="text-nebula-primary font-bold">Click to browse</span> or drag and drop
                           </>
                         )}
                       </p>
-                      <p className="text-xs text-slate-500 mt-1">CSV files only, up to 5MB</p>
+                      <p className="text-xs text-nebula-subtle mt-1">CSV files only, up to 5MB</p>
                     </div>
                   </div>
                 )}
@@ -700,7 +698,7 @@ export default function GroupPage() {
                 <button
                   onClick={handleUpload}
                   disabled={!file || uploading}
-                  className="btn-primary"
+                  className="nebula-button-gradient flex items-center gap-1.5"
                 >
                   {uploading ? (
                     <>
@@ -723,21 +721,21 @@ export default function GroupPage() {
             <div className="space-y-6">
               {/* Quick Summary Counts */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                <div className="glass-card p-4">
-                  <p className="text-2xl font-extrabold text-white monospace-amount">{importData.summary.totalRows}</p>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Rows</p>
+                <div className="nebula-card p-4">
+                  <p className="text-2xl font-extrabold text-white amount-mono">{importData.summary.totalRows}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-nebula-muted">Total Rows</p>
                 </div>
-                <div className="glass-card p-4">
-                  <p className="text-2xl font-extrabold text-emerald-400 monospace-amount">{importData.summary.successCount}</p>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Valid Rows</p>
+                <div className="nebula-card p-4">
+                  <p className="text-2xl font-extrabold text-nebula-positive amount-mono">{importData.summary.successCount}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-nebula-muted">Valid Rows</p>
                 </div>
-                <div className="glass-card p-4">
-                  <p className="text-2xl font-extrabold text-rose-400 monospace-amount">{importData.summary.errorCount}</p>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Error Rows</p>
+                <div className="nebula-card p-4">
+                  <p className="text-2xl font-extrabold text-nebula-negative amount-mono">{importData.summary.errorCount}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-nebula-muted">Error Rows</p>
                 </div>
-                <div className="glass-card p-4">
-                  <p className="text-2xl font-extrabold text-amber-400 monospace-amount">{importData.summary.anomalyCount}</p>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Anomalies</p>
+                <div className="nebula-card p-4">
+                  <p className="text-2xl font-extrabold text-nebula-primary amount-mono">{importData.summary.anomalyCount}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-nebula-muted">Anomalies</p>
                 </div>
               </div>
 
@@ -756,10 +754,10 @@ export default function GroupPage() {
             <div className="space-y-6 max-w-xl mx-auto">
               <ImportReport summary={importResult} />
               <div className="flex justify-center gap-4">
-                <button onClick={resetImport} className="btn-secondary">
+                <button onClick={resetImport} className="nebula-button-ghost">
                   Import Another CSV
                 </button>
-                <button onClick={() => setActiveTab('expenses')} className="btn-primary">
+                <button onClick={() => setActiveTab('expenses')} className="nebula-button-gradient">
                   View Expenses
                 </button>
               </div>

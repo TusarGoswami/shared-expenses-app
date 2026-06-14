@@ -35,15 +35,15 @@ export default function SettlementSuggestions({ settlements, groupId, onSettled 
 
   const getAvatarColor = (name) => {
     const colors = [
-      'bg-pink-500/20 text-pink-400 border-pink-500/30',
-      'bg-blue-500/20 text-blue-400 border-blue-500/30',
-      'bg-amber-500/20 text-amber-300 border-amber-500/30',
-      'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-      'bg-violet-500/20 text-violet-300 border-violet-500/30',
-      'bg-cyan-500/20 text-[#00d4ff] border-cyan-500/30',
-      'bg-rose-500/20 text-rose-300 border-rose-500/30',
-      'bg-orange-500/20 text-orange-300 border-orange-500/30',
-      'bg-teal-500/20 text-teal-300 border-teal-500/30'
+      'bg-nebula-primary/20 text-nebula-primary border-nebula-primary/30',
+      'bg-nebula-accent/20 text-nebula-accent border-nebula-accent/30',
+      'bg-nebula-gold/20 text-nebula-gold border-nebula-gold/30',
+      'bg-nebula-positive/20 text-nebula-positive border-nebula-positive/30',
+      'bg-purple-500/20 text-purple-300 border-purple-500/30',
+      'bg-pink-500/20 text-pink-300 border-pink-500/30',
+      'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
+      'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+      'bg-violet-500/20 text-violet-300 border-violet-500/30'
     ];
     if (!name) return colors[0];
     let hash = 0;
@@ -56,12 +56,12 @@ export default function SettlementSuggestions({ settlements, groupId, onSettled 
 
   if (settlements.length === 0) {
     return (
-      <div className="glass-card p-10 text-center border border-emerald-500/15">
-        <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-4 shadow-inner">
-          <Check className="w-7 h-7 text-emerald-400" />
+      <div className="nebula-card p-10 text-center border border-nebula-positive/15">
+        <div className="w-14 h-14 mx-auto rounded-2xl bg-nebula-positive/10 border border-nebula-positive/20 flex items-center justify-center mb-4 shadow-inner">
+          <Check className="w-7 h-7 text-nebula-positive" />
         </div>
         <h3 className="text-xl font-bold text-white mb-1 tracking-wide">All Settled!</h3>
-        <p className="text-slate-400 text-sm leading-relaxed">No outstanding debts remaining in this group</p>
+        <p className="text-nebula-muted text-sm leading-relaxed">No outstanding debts remaining in this group</p>
       </div>
     );
   }
@@ -69,7 +69,7 @@ export default function SettlementSuggestions({ settlements, groupId, onSettled 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-2">
-        <Handshake className="w-5 h-5 text-[#7c3aed]" />
+        <Handshake className="w-5 h-5 text-nebula-primary" />
         <h3 className="text-base font-bold text-white tracking-wide">
           Suggested Settlements ({settlements.length} transactions)
         </h3>
@@ -88,7 +88,7 @@ export default function SettlementSuggestions({ settlements, groupId, onSettled 
           return (
             <div
               key={idx}
-              className="glass-card p-5 flex flex-col justify-between gap-4 hover:-translate-y-1 hover:shadow-[0_0_15px_rgba(124,58,237,0.15)] transition-all duration-300 border-t border-t-[#7c3aed]/20"
+              className="nebula-card p-5 flex flex-col justify-between gap-4 hover:-translate-y-1 hover:shadow-nebula-sm transition-all duration-300 border-t-2 border-t-nebula-primary/45"
             >
               <div className="flex items-center justify-between gap-2">
                 {/* Debtor */}
@@ -100,12 +100,12 @@ export default function SettlementSuggestions({ settlements, groupId, onSettled 
                     <span className="text-sm font-bold text-white truncate block">
                       {s.from.name}
                     </span>
-                    <span className="text-[10px] uppercase font-bold text-rose-400 tracking-wider">Owes</span>
+                    <span className="text-[10px] uppercase font-bold text-nebula-negative tracking-wider">Owes</span>
                   </div>
                 </div>
 
                 <div className="flex flex-col items-center flex-shrink-0">
-                  <ArrowRight className="w-4 h-4 text-slate-500 animate-pulse" />
+                  <ArrowRight className="w-4 h-4 text-nebula-subtle animate-pulse" />
                 </div>
 
                 {/* Creditor */}
@@ -114,7 +114,7 @@ export default function SettlementSuggestions({ settlements, groupId, onSettled 
                     <span className="text-sm font-bold text-white truncate block">
                       {s.to.name}
                     </span>
-                    <span className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">Receives</span>
+                    <span className="text-[10px] uppercase font-bold text-nebula-positive tracking-wider">Receives</span>
                   </div>
                   <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm border flex-shrink-0 ${toAvatarColor}`}>
                     {s.to.name?.charAt(0)?.toUpperCase() || '?'}
@@ -123,10 +123,10 @@ export default function SettlementSuggestions({ settlements, groupId, onSettled 
               </div>
 
               {/* Transaction Amount and Mark Settled Action */}
-              <div className="flex items-center justify-between border-t border-slate-800/60 pt-4 mt-2">
+              <div className="flex items-center justify-between border-t border-nebula-border/60 pt-4 mt-2">
                 <div>
-                  <span className="text-[#00d4ff] font-bold text-base mr-1 font-mono">₹</span>
-                  <span className="text-xl font-extrabold text-white monospace-amount">
+                  <span className="text-nebula-primary font-bold text-base mr-1 font-mono">₹</span>
+                  <span className="text-xl font-extrabold text-white amount-mono">
                     {s.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -134,7 +134,7 @@ export default function SettlementSuggestions({ settlements, groupId, onSettled 
                 <button
                   onClick={() => handleMarkSettled(s)}
                   disabled={!!settling}
-                  className="btn-success text-xs px-4 py-2"
+                  className="nebula-button-primary text-xs px-4 py-2 flex items-center gap-1.5"
                 >
                   {isSettling ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
