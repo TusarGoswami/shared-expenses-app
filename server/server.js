@@ -1,10 +1,10 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const morgan = require('morgan');
 const path = require('path');
 require('dotenv').config();
 
+const { sequelize } = require('./models');
 const { errorHandler } = require('./middleware/errorHandler');
 
 // Route imports
@@ -54,17 +54,24 @@ app.use(errorHandler);
 // ---------------------------------------------------------------------------
 const PORT = process.env.PORT || 5000;
 
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log('✅ Connected to MongoDB');
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
+// Sync models and start listening
+if (process.env.NODE_ENV !== 'test') {
+  sequelize
+    .authenticate()
+    .then(() => {
+      console.log('✅ Database connected to Neon PostgreSQL successfully.');
+      return sequelize.sync(); // Auto-create tables if they don't exist
+    })
+    .then(() => {
+      console.log('✅ Database synchronized.');
+      app.listen(PORT, () => {
+        console.log(`🚀 Server running on port ${PORT}`);
+      });
+    })
+    .catch((err) => {
+      console.error('❌ PostgreSQL connection/sync error:', err.message);
+      process.exit(1);
     });
-  })
-  .catch((err) => {
-    console.error('❌ MongoDB connection error:', err.message);
-    process.exit(1);
-  });
+}
 
 module.exports = app;
