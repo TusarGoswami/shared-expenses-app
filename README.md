@@ -2,7 +2,7 @@
 
 ## 🚀 Try it Live
 
-Check out the live deployment here: [YOUR_VERCEL_URL](YOUR_VERCEL_URL)
+Check out the live deployment here: [shared-expenses-app-ecru.vercel.app](https://shared-expenses-app-ecru.vercel.app)
 
 ### Demo Accounts
 Here are the pre-configured accounts you can use to test the application immediately:
