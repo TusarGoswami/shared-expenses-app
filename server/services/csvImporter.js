@@ -9,8 +9,7 @@
  */
 
 const Papa = require('papaparse');
-const GroupMember = require('../models/GroupMember');
-const User = require('../models/User');
+const { GroupMember, User } = require('../models');
 const { parseDate, isDateInMemberPeriod } = require('../utils/dateUtils');
 const { normalizeName, findCanonicalName } = require('../utils/nameNormalizer');
 const { convertToINR } = require('../services/currencyConverter');
@@ -660,19 +659,22 @@ async function parseAndAnalyzeCSV(csvString, groupId) {
   // -----------------------------------------------------------------------
   // Step 1: Fetch group members and build lookup maps
   // -----------------------------------------------------------------------
-  const members = await GroupMember.find({ groupId }).populate('userId', 'name email');
+  const members = await GroupMember.findAll({
+    where: { groupId },
+    include: [{ model: User, as: 'User', attributes: ['id', 'name', 'email'] }],
+  });
 
   // memberNameMap: normalized name → { userId, joinDate, leaveDate, canonicalName }
   const memberNameMap = new Map();
   const canonicalNames = [];
 
   for (const member of members) {
-    if (!member.userId) continue;
-    const canonicalName = member.userId.name;
+    if (!member.User) continue;
+    const canonicalName = member.User.name;
     canonicalNames.push(canonicalName);
 
     memberNameMap.set(normalizeName(canonicalName), {
-      userId: member.userId._id,
+      userId: member.User.id,
       joinDate: member.joinDate,
       leaveDate: member.leaveDate,
       canonicalName,
