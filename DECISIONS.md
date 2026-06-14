@@ -4,15 +4,16 @@ When building SplitLedger, I had to make a few architecture and design choices. 
 
 ---
 
-## 1. Relational-Style Database Structure (Mongoose)
+## 1. Relational Database Structure (PostgreSQL & Sequelize)
 
 ### The Decision
-Instead of embedding expenses and members directly inside a single giant `Group` document, I split them out into separate Mongoose models: `User`, `Group`, `GroupMember`, `Expense`, and `ImportLog`, linking them via `ObjectIds` (references).
+SplitLedger was built using a relational database (PostgreSQL hosted on Neon) paired with Sequelize ORM to satisfy requirement #5 ("Use relational DBs only"). The schema is split into separate normalized tables: `Users`, `Groups`, `GroupMembers`, `Expenses`, `ExpenseSplits`, `ImportLogs`, and `ImportAnomalies`.
 
 ### Why?
-- **Document Size Limits**: MongoDB has a 16MB document limit. If four flatmates log thousands of expenses over two years, an embedded document approach would eventually hit that limit or slow down queries.
-- **Join/Leave Date Logic**: Tracking when someone joins or leaves the group is much cleaner when we query a standalone `GroupMember` model. We can fetch active members for a specific date range without parsing a massive array inside a single group document.
-- **Easy Querying**: It's much easier to implement pagination, date-filtering, and search on a standalone `Expense` collection.
+- **Relational Integrity**: Using real FOREIGN KEYs and Cascading Deletes guarantees data consistency (e.g. you cannot have a member in a group that doesn't exist, and deleting an expense automatically drops its splits).
+- **Separation of Concerns for Arrays**: Rather than embedding splits and anomalies in arrays, they reside in dedicated SQL tables with foreign key pointers. This scales beautifully and allows indexing on individual splits and anomaly items.
+- **Native JSONB Support**: PostgreSQL's native `JSONB` support is leveraged in `ImportLog` to store raw, uncommitted parsed CSV rows during the review step. This gives us document-like flexibility for logs while keeping the core schema fully relational.
+- **Join/Leave Date Logic**: Tracking when someone joins or leaves a group is perfectly suited for SQL query filters. We can query the `GroupMembers` table with simple date comparisons to determine active members at any point in time.
 
 ---
 
@@ -54,10 +55,10 @@ Instead of importing the CSV directly and letting the backend guess the correcti
 ## 5. Soft Deletes for Expenses (`isDeleted: true`)
 
 ### The Decision
-When a user deletes an expense in the UI, we don't run `deleteOne()` in MongoDB. Instead, we toggle an `isDeleted` boolean to `true`.
+When a user deletes an expense in the UI, we don't run a hard delete or `destroy()` in PostgreSQL/Sequelize. Instead, we toggle an `isDeleted` boolean to `true`.
 
 ### Why?
-- **Audit Trails**: If we delete files or rows permanently, we lose the connection to the original CSV import logs. Keeping the documents allows us to see exactly which imported rows were kept and which were later deleted.
+- **Audit Trails**: If we delete rows permanently, we lose the connection to the original CSV import logs. Keeping the records allows us to see exactly which imported rows were kept and which were later deleted.
 - **Easy Undo**: We can easily implement an "Undo Delete" feature in the future if a user makes a mistake.
 
 ---

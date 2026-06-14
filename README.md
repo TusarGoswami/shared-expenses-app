@@ -28,7 +28,7 @@ This app was built to import that exact CSV, catch all those problems automatica
 
 - **Frontend:** React 18 with Vite, TailwindCSS v3, React Router v6
 - **Backend:** Node.js + Express.js, REST API
-- **Database:** MongoDB Atlas with Mongoose (using references between collections, not embedded docs)
+- **Database:** PostgreSQL on Neon with Sequelize ORM (normalized tables with foreign keys)
 - **Auth:** JWT tokens with bcrypt password hashing
 - **CSV Parsing:** multer for file upload, papaparse for parsing
 - **Icons:** lucide-react
@@ -36,7 +36,7 @@ This app was built to import that exact CSV, catch all those problems automatica
 
 ## Getting It Running
 
-You'll need Node.js 18+ and a MongoDB Atlas account (the free tier works fine).
+You'll need Node.js 18+ and a PostgreSQL database (e.g. Neon, Supabase, or local instance).
 
 ### 1. Clone and install
 
@@ -68,20 +68,19 @@ cp .env.example .env
 **Server `.env` — here's what each one does:**
 
 ```
-MONGO_URI=mongodb+srv://...       # Your MongoDB Atlas connection string. 
-                                   # Go to Atlas → Connect → Drivers → copy the string.
-                                   # Replace <password> with your actual password.
+DATABASE_URL=postgresql://...      # Your PostgreSQL connection string.
+                                   # e.g., Neon or local postgres connection.
 
 JWT_SECRET=some_random_string      # Any random string. Used to sign login tokens.
-                                   # Run `openssl rand -hex 32` to generate one, 
+                                   # Run `openssl rand -hex 32` to generate one,
                                    # or just mash your keyboard honestly.
 
 PORT=5000                          # The port the backend runs on. 5000 is the default.
 
-USD_TO_INR_RATE=83.50              # The exchange rate used when converting dollar 
-                                   # amounts from the CSV. I picked 83.50 because that 
-                                   # was roughly the rate when I built this. It's fixed 
-                                   # on purpose — using a live API would make imports 
+USD_TO_INR_RATE=83.50              # The exchange rate used when converting dollar
+                                   # amounts from the CSV. I picked 83.50 because that
+                                   # was roughly the rate when I built this. It's fixed
+                                   # on purpose — using a live API would make imports
                                    # non-reproducible.
 ```
 
@@ -149,7 +148,7 @@ Nothing gets imported silently. Every anomaly shows up in a review table where y
 
 ```
 /server                        
-  /models        → Mongoose schemas (User, Group, GroupMember, Expense, ImportLog)
+  /models        → Sequelize models (index, User, Group, GroupMember, Expense, ExpenseSplit, ImportLog, ImportAnomaly)
   /routes        → API endpoints (auth, groups, expenses, import, balances)
   /services      → Business logic (csvImporter, balanceCalculator, settlementOptimizer)
   /middleware     → JWT auth, error handler

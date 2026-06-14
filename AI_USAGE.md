@@ -32,6 +32,12 @@ The settlement optimizer originally included everyone in the balance map, even m
 
 I found this when I tested with a group where two members had already settled up. The suggestions page showed "Priya pays ₹0.00 to Rohan" as an actual suggestion. The fix was adding a threshold check: any balance with an absolute value less than ₹0.01 gets treated as zero and excluded from the creditor/debtor lists. It's a small thing, but it's the kind of thing that would make an evaluator raise an eyebrow during a walkthrough.
 
+### 4. Naming Collisions and Client-Side Mappings (PostgreSQL Migration)
+
+During the migration from MongoDB to PostgreSQL/Sequelize, we hit a naming collision in Sequelize. We tried to define belongs-to associations with the alias `as: 'userId'`, but the database column itself was also called `userId`. Sequelize threw a naming collision error on startup.
+
+The initial AI suggestion was to rename the database column or completely change the frontend variables, but both approaches would have triggered massive changes across the React client. Instead, we solved it by changing the Sequelize association alias to `as: 'User'` and creating mappers in the backend routes (such as `formatExpense` and `formatGroup`) to dynamically inject `_id` (pointing to `id`) and map the `User` object back to the `userId` property. This resolved the naming collision on the SQL database layer while keeping the frontend's API contract completely unchanged.
+
 ## What I Learned From Using AI
 
 The biggest lesson is that AI is great at generating code that looks correct and terrible at understanding edge cases from context. It doesn't know that "Meera left in March" means her `leaveDate` needs to be checked against every expense date. You have to spell that out explicitly.
@@ -53,3 +59,4 @@ The pattern I noticed: the more specific the prompt, the less I had to fix after
 ## Final Note
 
 I reviewed every file in this project. Some of them I rewrote significantly from what was generated; others needed only minor fixes. The architecture, the data flow decisions, and the anomaly detection rules were all designed by me — the AI helped translate those decisions into code faster than I could have typed it all myself.
+

@@ -4,69 +4,84 @@ This document breaks down the database schemas and details exactly how each of t
 
 ---
 
-## 1. Database Schemas (Mongoose)
+## 1. Database Schemas (PostgreSQL / Sequelize)
 
-We decided to use a relational-style layout with references rather than embedding everything. This makes it a lot easier to query and update things individually without having to save massive, nested documents.
+We decided to use a relational layout with normalized tables linked by foreign keys and UUIDs. This enforces database-level integrity, supports cascading edits, and aligns with SQL best practices.
 
-### User Schema (`User.js`)
+### Users Table (`User.js`)
 Stores basic authentication and profile details.
-- `name`: String (required). Display name.
-- `email`: String (required, unique). Used for login.
-- `passwordHash`: String (required). Bcrypt hashed password.
-- `createdAt`: Date. Automatically defaulted to the current time.
-
-### Group Schema (`Group.js`)
-Represents a group of people sharing expenses.
-- `name`: String (required). e.g., "Flat 302 Expenses".
-- `description`: String. A brief note about what the group is.
-- `createdBy`: ObjectId (refers to `User`). The user who created the group.
+- `id`: UUID (Primary Key, automatically generated).
+- `name`: String (allowNull: false). Display name.
+- `email`: String (allowNull: false, unique). Used for login.
+- `passwordHash`: String (allowNull: false). Bcrypt hashed password.
 - `createdAt`: Date. Default to current time.
 
-### Group Member Schema (`GroupMember.js`)
-Maps users to groups. This is a separate junction table so we can track when people join and leave.
-- `groupId`: ObjectId (refers to `Group`, required).
-- `userId`: ObjectId (refers to `User`, required).
-- `joinDate`: Date (required). When the user became part of the group.
-- `leaveDate`: Date (optional). When the user left the group (like Meera leaving at the end of March).
-- `addedBy`: ObjectId (refers to `User`). Who added this member.
+### Groups Table (`Group.js`)
+Represents a group of people sharing expenses.
+- `id`: UUID (Primary Key).
+- `name`: String (allowNull: false). e.g., "Flat 302 Expenses".
+- `description`: String. A brief note about what the group is.
+- `createdBy`: UUID (Foreign Key references `Users.id`).
+- `createdAt`: Date. Default to current time.
 
-### Expense Schema (`Expense.js`)
+### GroupMembers Table (`GroupMember.js`)
+Maps users to groups (junction table). It includes an index constraint on `(groupId, userId)` to prevent double-membership.
+- `id`: UUID (Primary Key).
+- `groupId`: UUID (Foreign Key references `Groups.id`).
+- `userId`: UUID (Foreign Key references `Users.id`).
+- `joinDate`: Date (allowNull: false). When the user joined.
+- `leaveDate`: Date (nullable). When the user left (e.g. Meera leaving end of March).
+- `addedBy`: UUID (Foreign Key references `Users.id`). Who added the member.
+
+### Expenses Table (`Expense.js`)
 Represents an individual transaction or settlement.
-- `groupId`: ObjectId (refers to `Group`, required).
-- `description`: String (required). What it was for.
-- `amount`: Number (required). The raw amount entered.
-- `currency`: String (enum: `['INR', 'USD']`, default: `INR`).
-- `amountInINR`: Number (required). The final amount in rupees, converted if necessary.
-- `exchangeRateUsed`: Number (default: 1). The conversion multiplier.
-- `date`: Date (required). When the expense occurred.
-- `paidBy`: ObjectId (refers to `User`, required). Who paid the bill.
-- `splitType`: String (enum: `['EQUAL', 'EXACT', 'PERCENTAGE', 'SHARES']`, default: `EQUAL`).
-- `splits`: Array of objects:
-  - `userId`: ObjectId (refers to `User`, required).
-  - `amount`: Number (required). Their share in INR.
-- `isSettlement`: Boolean (default: `false`). True if this is just a payment to clear debt.
+- `id`: UUID (Primary Key).
+- `groupId`: UUID (Foreign Key references `Groups.id`).
+- `description`: String (allowNull: false). What it was for.
+- `amount`: Decimal (allowNull: false). The raw amount entered.
+- `currency`: Enum (`['INR', 'USD']`, default: `INR`).
+- `amountInINR`: Decimal (allowNull: false). Converted amount in rupees.
+- `exchangeRateUsed`: Decimal (default: 1.0). Conversion multiplier.
+- `date`: Date (allowNull: false). When the expense occurred.
+- `paidBy`: UUID (Foreign Key references `Users.id`). Who paid the bill.
+- `splitType`: Enum (`['EQUAL', 'EXACT', 'PERCENTAGE', 'SHARES']`).
+- `isSettlement`: Boolean (default: `false`). True if this is a debt payment.
 - `isDeleted`: Boolean (default: `false`). Used for soft deletes.
-- `importRowIndex`: Number (optional). Keeps track of the CSV row number if it was imported.
+- `importRowIndex`: Integer (nullable). CSV row index from the import file.
 - `notes`: String. Any extra details.
 - `createdAt`: Date. Default to current time.
 
-### Import Log Schema (`ImportLog.js`)
+### ExpenseSplits Table (`ExpenseSplit.js`)
+Stores the split breakdown for expenses (1:N relationship with Expenses).
+- `id`: UUID (Primary Key).
+- `expenseId`: UUID (Foreign Key references `Expenses.id` with CASCADE delete).
+- `userId`: UUID (Foreign Key references `Users.id`).
+- `amount`: Decimal (allowNull: false). Member's absolute share in INR.
+
+### ImportLogs Table (`ImportLog.js`)
 Tracks the status of CSV file uploads and their parsed contents.
-- `groupId`: ObjectId (refers to `Group`, required).
-- `uploadedBy`: ObjectId (refers to `User`, required).
-- `fileName`: String (required). The uploaded CSV name.
-- `importedAt`: Date (default: current time).
-- `totalRows`: Number. Total lines in the CSV.
-- `successCount`: Number. Number of rows successfully turned into expenses.
-- `errorCount`: Number. Number of rows skipped or blocked.
-- `skippedCount`: Number. Number of rejected rows.
-- `anomalies`: Array of objects (the detected issues):
-  - `rowIndex`: Number. The line number in the CSV.
-  - `issueType`: String. The code representing the error (e.g., `DUPLICATE_ROW`).
-  - `description`: String. Human-readable explanation.
-  - `rawRow`: Object. The key-value pairs parsed from that CSV row.
-  - `suggestedAction`: String. Default solution recommendation.
-  - `status`: String (enum: `['pending', 'approved', 'rejected']`, default: `pending`). The user's choice.
+- `id`: UUID (Primary Key).
+- `groupId`: UUID (Foreign Key references `Groups.id`).
+- `uploadedBy`: UUID (Foreign Key references `Users.id`).
+- `fileName`: String (allowNull: false). The uploaded CSV name.
+- `importedAt`: Date. Default to current time.
+- `totalRows`: Integer. Total lines in the CSV.
+- `successCount`: Integer. Number of successfully committed rows.
+- `errorCount`: Integer. Number of rows with errors.
+- `skippedCount`: Integer. Number of skipped rows.
+- `parsedRows`: JSONB (allowNull: true). Holds raw parsed CSV row arrays for post-review commits.
+- `isConfirmed`: Boolean (default: `false`). True if the import has been finalized.
+
+### ImportAnomalies Table (`ImportAnomaly.js`)
+Stores detected CSV import anomalies (1:N relationship with ImportLogs).
+- `id`: UUID (Primary Key).
+- `importLogId`: UUID (Foreign Key references `ImportLogs.id` with CASCADE delete).
+- `rowIndex`: Integer. The line number in the CSV.
+- `issueType`: Enum (`'DUPLICATE_ROW'`, `'NEGATIVE_AMOUNT'`, etc.).
+- `description`: String. Human-readable explanation.
+- `rawRow`: JSONB. The parsed key-value pairs of that specific CSV row.
+- `suggestedAction`: String. Default solution recommendation.
+- `status`: Enum (`'pending'`, `'approved'`, `'rejected'`, default: `'pending'`). The user's action decision.
 
 ---
 
