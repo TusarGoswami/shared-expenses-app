@@ -85,7 +85,7 @@ export default function BalancePage() {
         <BalanceSummary
           balances={balances}
           onSelectMember={handleSelectMember}
-          stats={stats}
+          stats={{ ...stats, totalSettlements: settlements?.length || 0 }}
         />
 
         {/* Settlement suggestions */}

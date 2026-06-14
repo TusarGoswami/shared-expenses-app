@@ -542,7 +542,7 @@ export default function GroupPage() {
           <BalanceSummary
             balances={balances}
             onSelectMember={fetchBreakdown}
-            stats={balanceStats}
+            stats={{ ...balanceStats, totalSettlements: settlements?.length || 0 }}
           />
 
           <SettlementSuggestions
